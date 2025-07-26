@@ -1,0 +1,167 @@
+########################################################
+# General OS
+########################################################
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+########################################################
+# Node / npm / JavaScript / TypeScript
+########################################################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+bun.lockb
+
+# dotenv files
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Jest
+coverage/
+.jest/
+
+# Logs
+logs
+*.log
+*.log.*
+
+# Parcel
+.cache/
+
+# Vite
+dist/
+.vite/
+
+########################################################
+# Next.js
+########################################################
+.next/
+out/
+
+########################################################
+# Firebase
+########################################################
+.firebase/
+firestore.indexes.json
+firestore.rules
+firebase-debug.log
+firebase-debug.*
+.firebase/hosting.*
+
+########################################################
+# Appwrite
+########################################################
+appwrite.json
+appwrite-build/
+
+########################################################
+# Flutter / Dart
+########################################################
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.dart_tool/
+.pub-cache/
+build/
+.idea/
+android/.gradle/
+android/app/.cxx/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/engine/
+ios/.symlinks/
+ios/Pods/
+ios/Podfile.lock
+ios/Podfile
+
+# Dart/Flutter build artifacts
+*.flutter-plugins
+*.flutter-plugins-dependencies
+*.iml
+*.lock
+*.swp
+*.swo
+*.tmp
+
+# Pub
+pubspec.lock
+
+########################################################
+# VSCode / JetBrains / IDEs
+########################################################
+.vscode/
+.idea/
+*.iml
+*.sublime-workspace
+*.sublime-project
+
+########################################################
+# Miscellaneous
+########################################################
+*.bak
+*.tmp
+*.temp
+*.swp
+*.swo
+*.orig
+*.rej
+
+# Local dev databases or generated files
+*.sqlite
+*.sqlite3
+*.db
+
+# Binaries or compiled output
+*.exe
+*.dll
+*.out
+*.class
+*.o
+*.so
+*.a
+*.pyc
+*.pyo
+*.pyd
+
+# Monorepo / Workspace tools
+turbo/
+.nx/
+.cache/
+.pnpm-debug.log
+
+# Docker
+*.pid
+docker-compose.override.yml
+
+# Lint output
+.eslintcache
+.stylelintcache
+
+# IntelliJ cache folders
+.idea/
+*.iws
+*.ipr
+*.iml
