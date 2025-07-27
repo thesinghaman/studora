@@ -101,10 +101,6 @@ module.exports = async ({ req, res, log, error }) => {
     error(`Exception Type: ${e.constructor.name}`);
     error(`Error Message: ${e.message}`);
     error('Full Error Object:', e);
-    error('---------------------');
-    error(
-      'CONCLUSION: Since sending from the console works, this failure points to a bug in the Appwrite (v1.7.4) function execution environment. Please consider upgrading Appwrite or reporting this bug.'
-    );
     return res.json({ success: false, error: e.message }, 500);
   }
 };

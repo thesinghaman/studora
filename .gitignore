@@ -70,6 +70,10 @@ firestore.rules
 firebase-debug.log
 firebase-debug.*
 .firebase/hosting.*
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+firebase.json
 
 ########################################################
 # Appwrite
@@ -89,6 +93,10 @@ build/
 .idea/
 android/.gradle/
 android/app/.cxx/
+android/local.properties
+android/*.log
+android/replay_pid*.log
+android/hs_err_pid*.log
 ios/Flutter/App.framework
 ios/Flutter/Flutter.framework
 ios/Flutter/engine/
