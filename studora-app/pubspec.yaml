@@ -1,0 +1,48 @@
+name: studora
+description: "A cross-platform college community app for students to buy, sell, and negotiate items within campus using real-time messaging."
+
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  get: ^4.7.2
+  dots_indicator: ^4.0.1
+  get_storage: ^2.1.1
+  appwrite: ^15.0.0
+  connectivity_plus: ^6.1.4
+  intl: ^0.20.2
+  flutter_native_splash: ^2.4.4
+  shimmer: ^3.0.0
+  image_picker: ^1.1.2
+  permission_handler: ^12.0.0+1
+  image_cropper: ^9.1.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.13
+  cached_network_image: ^3.4.1
+  firebase_core: ^2.24.0
+  firebase_messaging: ^14.7.10
+  flutter_local_notifications:
+  device_info_plus: ^10.1.2
+  path: ^1.9.1
+
+dependency_overrides:
+  flutter_web_auth_2: 4.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

@@ -1,0 +1,42 @@
+Studora License
+
+Copyright (c) 2025 Aman Singh
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to use
+and learn from the Software for personal and educational purposes, subject to
+the following conditions:
+
+PERMITTED USES:
+
+1. View, study, and learn from the source code
+2. Use the Software for personal, non-commercial purposes
+3. Use the Software for educational purposes
+4. Fork the repository for personal learning and experimentation
+5. Submit bug reports and feature suggestions
+
+PROHIBITED USES:
+
+1. Sell, sublicense, or commercialize the Software or any derivative works
+2. Redistribute the Software or substantial portions of it, in source or binary form
+3. Use the Software, or any substantial portion of it, in any commercial product or service
+4. Remove or modify this license or copyright notices
+5. Claim ownership of the original Software or misrepresent the origin of the Software
+
+ATTRIBUTION:
+Any use of the Software for educational demonstrations, presentations, or portfolio
+showcases must include attribution to the original author (Aman Singh) and a link
+to the original repository (https://github.com/thesinghaman/studora).
+
+CONTRIBUTIONS:
+By submitting a pull request or contribution to this project, you agree that your
+contributions will be licensed under the same terms as this license.
+
+DISCLAIMER:
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

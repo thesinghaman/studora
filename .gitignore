@@ -1,0 +1,239 @@
+########################################################
+# General OS
+########################################################
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+########################################################
+# Node / npm / JavaScript / TypeScript
+########################################################
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Lock files (keep for functions to ensure consistent dependencies)
+# package-lock.json
+# pnpm-lock.yaml
+# bun.lockb
+
+# dotenv files (NEVER commit these!)
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+**/.env
+**/.env.*
+
+# TypeScript
+*.tsbuildinfo
+
+# Jest
+coverage/
+.jest/
+
+# Logs
+logs
+*.log
+*.log.*
+
+# Parcel
+.cache/
+
+# Vite
+dist/
+.vite/
+
+########################################################
+# Next.js
+########################################################
+.next/
+out/
+
+########################################################
+# Firebase
+########################################################
+.firebase/
+firestore.indexes.json
+firestore.rules
+firebase-debug.log
+firebase-debug.*
+.firebase/hosting.*
+
+# Firebase service account keys (NEVER commit these!)
+**/serviceAccountKey.json
+**/firebase-adminsdk-*.json
+service-account-*.json
+
+# Firebase configuration files (contain project-specific IDs)
+studora-app/android/app/google-services.json
+studora-app/ios/Runner/GoogleService-Info.plist
+studora-app/lib/firebase_options.dart
+studora-app/firebase.json
+
+########################################################
+# Appwrite
+########################################################
+appwrite.json
+appwrite-build/
+
+########################################################
+# Flutter / Dart
+########################################################
+# Flutter plugin metadata
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.dart_tool/
+.pub-cache/
+.fvm/
+*.g.dart
+*.freezed.dart
+
+# Build outputs
+build/
+**/build/
+
+# Android
+studora-app/android/.gradle/
+studora-app/android/app/.cxx/
+studora-app/android/local.properties
+studora-app/android/*.log
+studora-app/android/replay_pid*.log
+studora-app/android/hs_err_pid*.log
+studora-app/android/app/debug/
+studora-app/android/app/profile/
+studora-app/android/app/release/
+studora-app/android/gradle/
+studora-app/android/.idea/
+studora-app/android/captures/
+studora-app/android/key.properties
+studora-app/android/keystore.jks
+studora-app/android/**/*.keystore
+
+# iOS
+studora-app/ios/Flutter/App.framework
+studora-app/ios/Flutter/Flutter.framework
+studora-app/ios/Flutter/Flutter.podspec
+studora-app/ios/Flutter/engine/
+studora-app/ios/.symlinks/
+studora-app/ios/Pods/
+studora-app/ios/Podfile.lock
+studora-app/ios/Runner.xcworkspace/xcuserdata/
+studora-app/ios/Runner.xcodeproj/xcuserdata/
+studora-app/ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+studora-app/ios/ServiceDefinitions.json
+studora-app/ios/Runner/GeneratedPluginRegistrant.*
+
+# Dart/Flutter build artifacts
+*.iml
+*.swp
+*.swo
+*.tmp
+
+# Pub (don't ignore pubspec.lock for apps, only for packages)
+# pubspec.lock
+
+########################################################
+# VSCode / JetBrains / IDEs
+########################################################
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.iml
+*.sublime-workspace
+*.sublime-project
+.fleet/
+
+########################################################
+# Miscellaneous
+########################################################
+*.bak
+*.tmp
+*.temp
+*.swp
+*.swo
+*.orig
+*.rej
+
+# Local dev databases or generated files
+*.sqlite
+*.sqlite3
+*.db
+*.hive
+*.g.dart
+
+# Binaries or compiled output
+*.exe
+*.dll
+*.out
+*.class
+*.o
+*.so
+*.a
+*.pyc
+*.pyo
+*.pyd
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Monorepo / Workspace tools
+turbo/
+.nx/
+.cache/
+.pnpm-debug.log
+
+# Docker
+*.pid
+docker-compose.override.yml
+
+# Lint output
+.eslintcache
+.stylelintcache
+
+# IntelliJ cache folders
+.idea/
+*.iws
+*.ipr
+*.iml
+
+# Template files are kept, actual config files are ignored
+!*.template
+!**/*.template
+
+########################################################
+# Studora-Specific
+########################################################
+# APK/IPA builds
+studora-web/public/APKs/*.apk
+studora-web/public/APKs/*.ipa
+studora-web/public/APKs/*.aab
+
+# Test artifacts
+**/test/coverage/
+**/test/reports/
+**/screenshots/
+
