@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:studora/app/bindings/application_binding.dart';
 import 'package:studora/app/config/theme/app_theme.dart';
 import 'package:studora/app/config/navigation/app_routes.dart';
@@ -27,6 +28,8 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
   await Hive.initFlutter();
+
+  await dotenv.load(fileName: ".env");
 
   final storageService = await Get.putAsync(() => StorageService().init());
   final bool isDarkMode = storageService.read('isDarkMode') ?? false;

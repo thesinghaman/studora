@@ -1,12 +1,14 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:get/get.dart';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'package:studora/app/services/logger_service.dart';
 
 class AppwriteService extends GetxService {
   static const String _className = 'AppwriteService';
-  static const String projectEndpoint = '';
-  static const String projectId = '';
+  static String projectEndpoint = dotenv.env['PROJECT_ENDPOINT'] ?? '';
+  static String projectId = dotenv.env['PROJECT_ID'] ?? '';
 
   final Client _client = Client()
     ..setEndpoint(

@@ -249,6 +249,141 @@ class AuthProvider {
     }
   }
 
+  Future<appwrite_models.Token> createEmailToken({
+    required String userId,
+    required String email,
+  }) async {
+    const String methodName = 'createEmailToken';
+    try {
+      LoggerService.logInfo(
+        className,
+        methodName,
+        'Creating email token (OTP) for user: $userId, email: $email',
+      );
+
+      final token = await _appwriteService.account.createEmailToken(
+        userId: userId,
+        email: email,
+      );
+
+      LoggerService.logInfo(
+        className,
+        methodName,
+        'Email token (OTP) created successfully. Token ID: ${token.$id}',
+      );
+
+      return token;
+    } on AppwriteException catch (e, s) {
+      LoggerService.logError(
+        className,
+        methodName,
+        'AppwriteException creating email token: ${e.message} (Code: ${e.code})',
+        s,
+      );
+      throw "Failed to send verification code. Please try again.";
+    } catch (e, s) {
+      LoggerService.logError(
+        className,
+        methodName,
+        'Unknown exception creating email token: $e',
+        s,
+      );
+      throw "An unexpected error occurred. Please try again.";
+    }
+  }
+
+  Future<appwrite_models.Session> createSessionFromToken({
+    required String userId,
+    required String secret,
+  }) async {
+    const String methodName = 'createSessionFromToken';
+    try {
+      LoggerService.logInfo(
+        className,
+        methodName,
+        'Creating session from token for user: $userId',
+      );
+
+      final session = await _appwriteService.account.createSession(
+        userId: userId,
+        secret: secret,
+      );
+
+      LoggerService.logInfo(
+        className,
+        methodName,
+        'Session created successfully from OTP. Session ID: ${session.$id}',
+      );
+
+      return session;
+    } on AppwriteException catch (e, s) {
+      LoggerService.logError(
+        className,
+        methodName,
+        'AppwriteException creating session from token: ${e.message} (Code: ${e.code})',
+        s,
+      );
+      if (e.code == 401 || e.type == 'user_invalid_token') {
+        throw "Invalid or expired code. Please try again.";
+      }
+      throw "Failed to verify code. Please try again.";
+    } catch (e, s) {
+      LoggerService.logError(
+        className,
+        methodName,
+        'Unknown exception creating session from token: $e',
+        s,
+      );
+      throw "An unexpected error occurred. Please try again.";
+    }
+  }
+
+  Future<appwrite_models.Token> updateEmailVerification({
+    required String userId,
+    required String secret,
+  }) async {
+    const String methodName = 'updateEmailVerification';
+    try {
+      LoggerService.logInfo(
+        className,
+        methodName,
+        'Verifying email token for user: $userId',
+      );
+
+      final token = await _appwriteService.account.updateVerification(
+        userId: userId,
+        secret: secret,
+      );
+
+      LoggerService.logInfo(
+        className,
+        methodName,
+        'Email verified successfully without creating new session.',
+      );
+
+      return token;
+    } on AppwriteException catch (e, s) {
+      LoggerService.logError(
+        className,
+        methodName,
+        'AppwriteException verifying email: ${e.message} (Code: ${e.code}, Type: ${e.type})',
+        s,
+      );
+      if (e.code == 401 || e.type == 'user_invalid_token') {
+        throw "Invalid or expired code. Please try again.";
+      }
+      throw "Failed to verify code. Please try again.";
+    } catch (e, s) {
+      LoggerService.logError(
+        className,
+        methodName,
+        'Unknown exception verifying email: $e',
+        s,
+      );
+      throw "An unexpected error occurred. Please try again.";
+    }
+  }
+
   Future<void> deleteUserAccount({
     required String userId,
     required String password,

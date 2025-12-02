@@ -11,6 +11,7 @@ import 'package:studora/app/services/network_service.dart';
 import 'package:studora/app/data/repositories/auth_repository.dart';
 import 'package:studora/app/shared_components/utils/snackbar_service.dart';
 import 'package:studora/app/services/logger_service.dart';
+import 'package:studora/app/shared_components/utils/enums.dart';
 
 class SignupController extends GetxController {
   static const String _className = 'SignupController';
@@ -323,24 +324,32 @@ class SignupController extends GetxController {
         "Signup initiated for $email",
       );
       try {
-        await _authRepository.signupCreateProfileLoginAndVerify(
-          name: fullName,
-          email: email,
-          password: password,
-          collegeId: selectedCollege.value!.id,
-          rollNumber: rollNumber,
-          currencySymbol: selectedCountry.value!.currencySymbol,
-        );
+        final userModel = await _authRepository
+            .signupCreateProfileLoginAndVerify(
+              name: fullName,
+              email: email,
+              password: password,
+              collegeId: selectedCollege.value!.id,
+              rollNumber: rollNumber,
+              currencySymbol: selectedCountry.value!.currencySymbol,
+            );
         LoggerService.logInfo(
           _className,
           methodName,
-          "Signup and login completed for $email. Navigating to main app.",
+          "Signup and OTP sent for $email. Navigating to verification screen.",
         );
         SnackbarService.showSuccess(
-          title: "Welcome to Studora!",
-          "Your account has been created successfully.",
+          title: "Account Created!",
+          "Please enter the 6-digit code sent to your email.",
         );
-        Get.offAllNamed(AppRoutes.MAIN_NAVIGATION);
+        Get.offAllNamed(
+          AppRoutes.VERIFICATION,
+          arguments: {
+            'email': email,
+            'userId': userModel.userId,
+            'verificationType': VerificationType.emailSignup,
+          },
+        );
       } catch (e, s) {
         LoggerService.logError(
           _className,

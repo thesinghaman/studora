@@ -41,6 +41,7 @@ lerna-debug.log*
 .env.production.local
 **/.env
 **/.env.*
+/studora-app/.env
 
 # TypeScript
 *.tsbuildinfo

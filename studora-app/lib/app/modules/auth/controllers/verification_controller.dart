@@ -10,75 +10,107 @@ import 'package:studora/app/services/logger_service.dart';
 class VerificationController extends GetxController {
   static const String className = 'VerificationController';
   final AuthRepository _authRepository = Get.find<AuthRepository>();
+
   final String userEmail = Get.arguments['email'] ?? 'your-email@example.com';
+  final String userId = Get.arguments['userId'] ?? '';
   final VerificationType verificationType =
       Get.arguments['verificationType'] ?? VerificationType.emailSignup;
-  var isDialogLoading = false.obs;
-  var screenTitle = "".obs;
-  var primaryStatusMessage = "".obs;
-  var detailedStatusMessage = "".obs;
-  var isVerifying = true.obs;
+
+  final TextEditingController otpController = TextEditingController();
+  var isVerifying = false.obs;
   var isVerified = false.obs;
   var isResendButtonActive = true.obs;
   var resendCooldownTime = 0.obs;
   Timer? _cooldownTimer;
-  Timer? _pollingTimer;
+
   @override
   void onInit() {
     super.onInit();
-    if (verificationType == VerificationType.emailSignup) {
-      screenTitle.value = "Check Your Email";
-      primaryStatusMessage.value =
-          "A verification email has been sent to $userEmail.";
-      detailedStatusMessage.value =
-          "Click the link in your email to verify your account. Your account will be activated automatically within seconds!";
-      startPollingForVerification();
-    } else if (verificationType == VerificationType.passwordChange) {
-      screenTitle.value = "Action Required";
-      primaryStatusMessage.value =
-          "A password reset link has been sent to $userEmail.";
-      detailedStatusMessage.value =
-          "Please follow the instructions in the email to complete your password reset.";
-      isVerifying.value = false;
-    }
-  }
-
-  void startPollingForVerification() {
-    const String methodName = 'startPollingForVerification';
     LoggerService.logInfo(
       className,
-      methodName,
-      "Starting verification polling for $userEmail",
+      'onInit',
+      'OTP Verification screen initialized for email: $userEmail, userId: $userId',
     );
+  }
+
+  Future<void> verifyOtp() async {
+    const String methodName = 'verifyOtp';
+
+    final otpCode = otpController.text.trim();
+
+    if (otpCode.isEmpty) {
+      SnackbarService.showWarning(
+        title: "Missing Code",
+        "Please enter the verification code.",
+      );
+      return;
+    }
+
+    if (otpCode.length != 6) {
+      SnackbarService.showWarning(
+        title: "Invalid Code",
+        "Please enter a 6-digit code.",
+      );
+      return;
+    }
+
+    if (userId.isEmpty) {
+      SnackbarService.showError(
+        "User ID not found. Please try signing up again.",
+      );
+      return;
+    }
+
     isVerifying(true);
-    _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 7), (timer) async {
+
+    try {
       LoggerService.logInfo(
         className,
         methodName,
-        "Polling for verification status for $userEmail...",
+        "Verifying OTP for user: $userId",
       );
-      // Verification temporarily disabled - auto-verify
+
+      // Verify OTP and create session
+      await _authRepository.verifyOtpAndCreateSession(
+        userId: userId,
+        otpCode: otpCode,
+      );
+
       LoggerService.logInfo(
         className,
         methodName,
-        "Auto-verifying user as verification is disabled.",
+        "OTP verified successfully. Marking email as verified.",
       );
+
+      // Mark email as verified in database
+      await _authRepository.markEmailAsVerified(userId);
+
+      LoggerService.logInfo(
+        className,
+        methodName,
+        "Email marked as verified. User can now proceed to app.",
+      );
+
       isVerified(true);
-      isVerifying(false);
-      _cooldownTimer?.cancel();
-      isResendButtonActive(true);
-      resendCooldownTime(0);
-      screenTitle.value = "Account Verified Successfully";
-      primaryStatusMessage.value = "Your email address has been confirmed.";
-      detailedStatusMessage.value =
-          "Welcome to Studora! You're all set and ready to go.";
-      timer.cancel();
+
       SnackbarService.showSuccess(
         title: "Verification Complete!",
-        "Your account is now active.",
+        "Your email has been verified successfully.",
       );
-    });
+
+      // Navigate to app after a short delay
+      await Future.delayed(const Duration(seconds: 1));
+      Get.offAllNamed(AppRoutes.MAIN_NAVIGATION);
+    } catch (e) {
+      LoggerService.logError(
+        className,
+        methodName,
+        "OTP verification failed: $e",
+      );
+      SnackbarService.showError(e.toString());
+    } finally {
+      isVerifying(false);
+    }
   }
 
   void _startResendCooldown() {
@@ -95,28 +127,41 @@ class VerificationController extends GetxController {
     });
   }
 
-  Future<void> resendVerificationEmail() async {
-    const String methodName = 'resendVerificationEmail';
+  Future<void> resendOtp() async {
+    const String methodName = 'resendOtp';
+
     if (!isResendButtonActive.value) return;
+
     if (userEmail.isEmpty) {
-      SnackbarService.showError("Email address not available to resend link.");
+      SnackbarService.showError(
+        "Unable to resend code. Email not found.",
+      );
       return;
     }
+
     _startResendCooldown();
+
     try {
-      if (verificationType == VerificationType.emailSignup) {
-        // Email verification disabled
-        SnackbarService.showInfo(
-          "Verification email feature is currently unavailable.",
+      LoggerService.logInfo(
+        className,
+        methodName,
+        "Resending OTP to $userEmail",
+      );
+
+      if (userId.isEmpty) {
+        SnackbarService.showError(
+          "Unable to resend code. User ID not found.",
         );
-      } else if (verificationType == VerificationType.passwordChange) {
-        // Password reset disabled
-        SnackbarService.showInfo(
-          "Password reset feature is currently unavailable.",
-        );
+        return;
       }
+      await _authRepository.sendOtpEmail(userId: userId, email: userEmail);
+
+      SnackbarService.showSuccess(
+        title: "Code Sent!",
+        "A new verification code has been sent to $userEmail",
+      );
     } catch (e) {
-      LoggerService.logError(className, methodName, "Error resending link: $e");
+      LoggerService.logError(className, methodName, "Error resending OTP: $e");
       SnackbarService.showError(e.toString());
       isResendButtonActive(true);
       resendCooldownTime(0);
@@ -124,113 +169,14 @@ class VerificationController extends GetxController {
     }
   }
 
-  void handleIncorrectEmail() {
-    const String methodName = 'handleIncorrectEmail';
-    LoggerService.logInfo(
-      className,
-      methodName,
-      "User reported incorrect email.",
-    );
-    _pollingTimer?.cancel();
-
-    isDialogLoading.value = false;
-    Get.dialog(
-      Obx(
-        () => PopScope(
-          canPop: !isDialogLoading.value,
-          child: AlertDialog(
-            title: const Text("Incorrect Email Address?"),
-
-            content: isDialogLoading.value
-                ? const Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 20),
-                      Text("Deleting Account..."),
-                    ],
-                  )
-                : const Text(
-                    "Continuing will permanently delete your unverified account. You can then sign up again.",
-                  ),
-
-            actions: isDialogLoading.value
-                ? []
-                : [
-                    TextButton(
-                      child: const Text("Cancel"),
-                      onPressed: () {
-                        Get.back();
-                        if (!isVerified.value) {
-                          startPollingForVerification();
-                        }
-                      },
-                    ),
-                    TextButton(
-                      child: Text(
-                        "Yes, Delete Account",
-                        style: TextStyle(color: Get.theme.colorScheme.error),
-                      ),
-                      onPressed: () async {
-                        isDialogLoading.value = true;
-
-                        final bool operationSucceeded =
-                            await _triggerFullAccountDeletion();
-
-                        if (!operationSucceeded) {
-                          if (Get.isDialogOpen ?? false) {
-                            Get.back(closeOverlays: true);
-                          }
-                          await Future.delayed(
-                            const Duration(milliseconds: 300),
-                          );
-
-                          SnackbarService.showError(
-                            "Could not delete your account. Please try again or contact support.",
-                          );
-                        }
-                      },
-                    ),
-                  ],
-          ),
-        ),
-      ),
-      barrierDismissible: false,
-    );
-  }
-
-  Future<bool> _triggerFullAccountDeletion() async {
-    const String methodName = '_triggerFullAccountDeletion';
-    try {
-      await _authRepository.deleteUnverifiedCurrentUserAndLogout();
-
-      return true;
-    } catch (e) {
-      LoggerService.logError(
-        className,
-        methodName,
-        "Failed to delete account: $e",
-      );
-
-      return false;
-    }
-  }
-
   void proceedToLogin() {
-    _pollingTimer?.cancel();
     _cooldownTimer?.cancel();
     Get.offAllNamed(AppRoutes.LOGIN);
   }
 
-  void proceedToApp() {
-    _pollingTimer?.cancel();
-    _cooldownTimer?.cancel();
-    Get.offAllNamed(AppRoutes.MAIN_NAVIGATION);
-  }
-
   @override
   void onClose() {
-    _pollingTimer?.cancel();
+    otpController.dispose();
     _cooldownTimer?.cancel();
     super.onClose();
   }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:studora/app/services/logger_service.dart';
+
 class UserModel {
   final String userId;
   final String userName;
@@ -19,6 +20,7 @@ class UserModel {
   final String? currencySymbol;
   final bool showLastSeen;
   final bool showReadReceipts;
+  final bool emailVerified;
   UserModel({
     required this.userId,
     required this.userName,
@@ -38,6 +40,7 @@ class UserModel {
     this.currencySymbol,
     this.showLastSeen = true,
     this.showReadReceipts = true,
+    this.emailVerified = false,
   });
   factory UserModel.fromJson(Map<String, dynamic> json, String documentId) {
     List<Map<String, dynamic>>? parsedReportedContent;
@@ -94,6 +97,7 @@ class UserModel {
       currencySymbol: json['currencySymbol'] as String?,
       showLastSeen: json['showLastSeen'] ?? true,
       showReadReceipts: json['showReadReceipts'] ?? true,
+      emailVerified: json['emailVerified'] ?? false,
     );
   }
   Map<String, dynamic> toJson() {
@@ -120,6 +124,7 @@ class UserModel {
       'showReadReceipts': showReadReceipts,
     };
   }
+
   String getInitials() {
     if (userName.isEmpty) return "?";
     List<String> nameParts = userName.split(" ");
@@ -132,6 +137,7 @@ class UserModel {
     }
     return "?";
   }
+
   UserModel copyWith({
     String? userId,
     String? userName,
@@ -151,6 +157,7 @@ class UserModel {
     bool? showLastSeen,
     bool? showReadReceipts,
     String? currencySymbol,
+    bool? emailVerified,
   }) {
     return UserModel(
       userId: userId ?? this.userId,
@@ -171,8 +178,10 @@ class UserModel {
       showLastSeen: showLastSeen ?? this.showLastSeen,
       showReadReceipts: showReadReceipts ?? this.showReadReceipts,
       currencySymbol: currencySymbol ?? this.currencySymbol,
+      emailVerified: emailVerified ?? this.emailVerified,
     );
   }
+
   Map<String, dynamic> toJsonForUpdate() {
     return {
       'userName': userName,

@@ -83,6 +83,109 @@ class AuthRepository {
     }
   }
 
+  Future<void> sendOtpEmail({
+    required String userId,
+    required String email,
+  }) async {
+    const String methodName = 'sendOtpEmail';
+    try {
+      await _authProvider.createEmailToken(userId: userId, email: email);
+      LoggerService.logInfo(
+        className,
+        methodName,
+        'OTP email sent successfully to $email',
+      );
+    } catch (e, s) {
+      LoggerService.logError(
+        className,
+        methodName,
+        'Failed to send OTP email: $e',
+        s,
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> verifyOtpAndCreateSession({
+    required String userId,
+    required String otpCode,
+  }) async {
+    const String methodName = 'verifyOtpAndCreateSession';
+    try {
+      // Logout first to clear existing session
+      // User is already logged in from signup, but createSession requires no active session
+      LoggerService.logInfo(
+        className,
+        methodName,
+        'Logging out user before OTP verification',
+      );
+      await _authProvider.logoutUser();
+
+      // Now create session using the OTP code
+      await _authProvider.createSessionFromToken(
+        userId: userId,
+        secret: otpCode,
+      );
+      LoggerService.logInfo(
+        className,
+        methodName,
+        'OTP verified and new session created for user: $userId',
+      );
+    } catch (e, s) {
+      LoggerService.logError(
+        className,
+        methodName,
+        'Failed to verify OTP: $e',
+        s,
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> markEmailAsVerified(String userId) async {
+    const String methodName = 'markEmailAsVerified';
+    try {
+      // Try to update database if emailVerified attribute exists
+      try {
+        await _databaseProvider.updateDocument(
+          databaseId: AppConstants.appwriteDatabaseId,
+          collectionId: AppConstants.usersCollectionId,
+          documentId: userId,
+          data: {'emailVerified': true},
+        );
+        LoggerService.logInfo(
+          className,
+          methodName,
+          'Email marked as verified in database for user: $userId',
+        );
+      } catch (dbError) {
+        LoggerService.logWarning(
+          className,
+          methodName,
+          'Could not update emailVerified in database (attribute may not exist): $dbError',
+        );
+      }
+
+      // Update local user model regardless of database update
+      if (appUser.value != null) {
+        appUser.value = appUser.value!.copyWith(emailVerified: true);
+        LoggerService.logInfo(
+          className,
+          methodName,
+          'Email marked as verified locally for user: $userId',
+        );
+      }
+    } catch (e, s) {
+      LoggerService.logError(
+        className,
+        methodName,
+        'Failed to mark email as verified: $e',
+        s,
+      );
+      rethrow;
+    }
+  }
+
   Future<studora_user.UserModel> signupCreateProfileLoginAndVerify({
     required String name,
     required String email,
@@ -145,6 +248,23 @@ class AuthRepository {
         methodName,
         "User profile created for ${appwriteAuthUser.$id}",
       );
+
+      // Send OTP email for verification
+      LoggerService.logInfo(
+        className,
+        methodName,
+        "Sending OTP email to $email",
+      );
+      await _authProvider.createEmailToken(
+        userId: appwriteAuthUser.$id,
+        email: email,
+      );
+      LoggerService.logInfo(
+        className,
+        methodName,
+        "OTP email sent successfully to $email",
+      );
+
       appUser.value = userProfileData;
       await updateUserStatus(true);
       await enablePushNotifications();
