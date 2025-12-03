@@ -115,15 +115,32 @@ class SplashController extends GetxController {
       LoggerService.logInfo(
         _className,
         methodName,
-        "SUCCESS: Got current user: ${currentUser.$id}.",
+        "SUCCESS: Got current user: ${currentUser.$id}. Verified: ${currentUser.emailVerification}",
       );
-      LoggerService.logInfo(
-        _className,
-        methodName,
-        "User is logged in. Navigating to Main Navigation.",
-      );
-      FlutterNativeSplash.remove();
-      Get.offAllNamed(AppRoutes.MAIN_NAVIGATION);
+
+      if (currentUser.emailVerification) {
+        LoggerService.logInfo(
+          _className,
+          methodName,
+          "User is verified. Navigating to Main Navigation.",
+        );
+        FlutterNativeSplash.remove();
+        Get.offAllNamed(AppRoutes.MAIN_NAVIGATION);
+      } else {
+        LoggerService.logInfo(
+          _className,
+          methodName,
+          "User is NOT verified. Navigating to Verification.",
+        );
+        FlutterNativeSplash.remove();
+        Get.offAllNamed(
+          AppRoutes.VERIFICATION,
+          arguments: {
+            'email': currentUser.email,
+            'userId': currentUser.$id,
+          },
+        );
+      }
     } on AppwriteException catch (e) {
       LoggerService.logWarning(
         _className,

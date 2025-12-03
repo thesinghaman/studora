@@ -52,6 +52,25 @@ class LoginController extends GetxController {
         );
         Get.offAllNamed(AppRoutes.MAIN_NAVIGATION);
       } catch (e, s) {
+        if (e is UnverifiedUserException) {
+          LoggerService.logInfo(
+            _className,
+            "loginUser",
+            "Caught UnverifiedUserException. Navigating to Verification.",
+          );
+          SnackbarService.showWarning(
+            title: "Verification Required",
+            e.message,
+          );
+          Get.offAllNamed(
+            AppRoutes.VERIFICATION,
+            arguments: {
+              'email': e.email,
+              'userId': e.userId,
+            },
+          );
+          return;
+        }
         LoggerService.logError(
           _className,
           "loginUser",

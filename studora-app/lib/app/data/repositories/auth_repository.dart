@@ -13,6 +13,15 @@ import 'package:studora/app/services/storage_service.dart';
 import 'package:studora/app/shared_components/utils/app_constants.dart';
 import 'package:studora/app/services/logger_service.dart';
 
+class UnverifiedUserException implements Exception {
+  final String message;
+  final String userId;
+  final String email;
+  UnverifiedUserException({required this.message, required this.userId, required this.email});
+  @override
+  String toString() => message;
+}
+
 class AuthRepository {
   final AuthProvider _authProvider = Get.find<AuthProvider>();
   final DatabaseProvider _databaseProvider = Get.find<DatabaseProvider>();
@@ -319,6 +328,24 @@ class AuthRepository {
     try {
       await _authProvider.loginUser(email: email, password: password);
       final appwriteAuthUser = await _authProvider.getCurrentUser();
+
+      if (!appwriteAuthUser.emailVerification) {
+        LoggerService.logInfo(
+          className,
+          methodName,
+          "User ${appwriteAuthUser.$id} is NOT verified. Sending OTP and throwing UnverifiedUserException.",
+        );
+        await _authProvider.createEmailToken(
+          userId: appwriteAuthUser.$id,
+          email: email,
+        );
+        throw UnverifiedUserException(
+          message: "Email not verified. A new verification code has been sent.",
+          userId: appwriteAuthUser.$id,
+          email: email,
+        );
+      }
+
       LoggerService.logInfo(
         className,
         methodName,
