@@ -241,7 +241,11 @@ Future<dynamic> createMessage(dynamic context, Client client, Map<String, dynami
       }
     }
 
-    return response.success({'data': messageDoc.data});
+    final result = Map<String, dynamic>.from(messageDoc.data);
+    result['\$id'] = messageDoc.$id;
+    result['\$createdAt'] = messageDoc.$createdAt;
+
+    return response.success(result);
   } catch (e) {
     logger.error('Failed to create message', e);
     throw AppError(message: 'Failed to send message', statusCode: 500);
