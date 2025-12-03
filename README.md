@@ -308,40 +308,34 @@ Create a database with the following collections:
    - Update: `users()`
    - Delete: `users()`
 
-#### Step 5: Update App Configuration
+#### Step 5: Configure Environment Variables
 
-Edit `studora-app/lib/app/services/appwrite_service.dart`:
+Create a `.env` file in the `studora-app/` directory and add your Appwrite configuration:
 
-```dart
-class AppwriteService extends GetxService {
-  static const String projectEndpoint = 'https://cloud.appwrite.io/v1'; // Your Appwrite endpoint
-  static const String projectId = 'YOUR_PROJECT_ID'; // Your project ID
-  // ...
-}
-```
+```dotenv
+# Appwrite Configuration
+PROJECT_ENDPOINT=https://cloud.appwrite.io/v1
+PROJECT_ID=YOUR_PROJECT_ID
+APPWRITE_DATABASE_ID=YOUR_DATABASE_ID
 
-Edit `studora-app/lib/app/shared_components/utils/app_constants.dart`:
+# Collection IDs
+LEGAL_DOCUMENTS_COLLECTION_ID=YOUR_COLLECTION_ID
+COUNTRIES_COLLECTION_ID=YOUR_COLLECTION_ID
+COLLEGES_COLLECTION_ID=YOUR_COLLECTION_ID
+USERS_COLLECTION_ID=YOUR_COLLECTION_ID
+ITEMS_COLLECTION_ID=YOUR_COLLECTION_ID
+LOST_FOUND_ITEMS_COLLECTION_ID=YOUR_COLLECTION_ID
+CATEGORIES_COLLECTION_ID=YOUR_COLLECTION_ID
+CONVERSATIONS_COLLECTION_ID=YOUR_COLLECTION_ID
+MESSAGES_COLLECTION_ID=YOUR_COLLECTION_ID
+REPORTS_COLLECTION_ID=YOUR_COLLECTION_ID
+SUPPORT_TICKETS_COLLECTION_ID=YOUR_COLLECTION_ID
 
-```dart
-class AppConstants {
-  static const String appwriteDatabaseId = 'YOUR_DATABASE_ID';
+# Storage Bucket ID
+ITEMS_IMAGES_BUCKET_ID=YOUR_BUCKET_ID
 
-  // Collection IDs
-  static const String usersCollectionId = 'YOUR_USERS_COLLECTION_ID';
-  static const String itemsCollectionId = 'YOUR_ITEMS_COLLECTION_ID';
-  static const String categoriesCollectionId = 'YOUR_CATEGORIES_COLLECTION_ID';
-  static const String conversationsCollectionId = 'YOUR_CONVERSATIONS_COLLECTION_ID';
-  static const String messagesCollectionId = 'YOUR_MESSAGES_COLLECTION_ID';
-  // ... add all other collection IDs
-
-  // Storage Bucket ID
-  static const String itemsImagesBucketId = 'YOUR_BUCKET_ID';
-
-  // Function IDs (will be filled after deploying functions)
-  static const String createMessageFunctionId = '';
-  static const String updateConversationsFunctionId = '';
-  // ... other function IDs
-}
+# Function ID (will be filled after deploying functions)
+STUDORA_BACKEND_FUNCTION_ID=
 ```
 
 ---
@@ -445,10 +439,10 @@ To enable Firebase Cloud Messaging in Appwrite:
 
 #### Step 5: Update Function ID in App
 
-After deployment, copy the function ID from Appwrite Console and update `app_constants.dart`:
+After deployment, copy the function ID from Appwrite Console and update your `.env` file in `studora-app/`:
 
-```dart
-static const String studoraBackendFunctionId = 'FUNCTION_ID_HERE';
+```dotenv
+STUDORA_BACKEND_FUNCTION_ID=YOUR_FUNCTION_ID
 ```
 
 ---
