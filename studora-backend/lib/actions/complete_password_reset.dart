@@ -1,37 +1,42 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:dart_appwrite/dart_appwrite.dart';
 import '../utils/appwrite_client.dart';
+import '../utils/app_config.dart';
+import '../utils/logger.dart';
+import '../utils/response_helper.dart';
 
 Future<dynamic> completePasswordReset(context) async {
+  final logger = Logger(context);
+  final response = ResponseHelper(context);
+
   // Admin Client (for password update)
   final adminClient = AppwriteClient.init();
   final users = Users(adminClient);
 
   // Public Client (for OTP verification)
   final publicClient = Client()
-      .setEndpoint(Platform.environment['APPWRITE_ENDPOINT'] ?? 'https://cloud.appwrite.io/v1')
-      .setProject(Platform.environment['APPWRITE_PROJECT_ID'] ?? '');
+      .setEndpoint(AppConfig.endpoint)
+      .setProject(AppConfig.projectId);
   final account = Account(publicClient);
 
   try {
     final body = jsonDecode(context.req.bodyRaw);
-    final String userId = body['userId'];
-    final String secret = body['secret'];
-    final String newPassword = body['newPassword'];
+    final String? userId = body['userId'];
+    final String? secret = body['secret'];
+    final String? newPassword = body['newPassword'];
+
+    if (userId == null || secret == null || newPassword == null) {
+      return response.error(message: 'Missing required fields', statusCode: 400);
+    }
+
+    logger.info('Completing password reset', {'userId': userId});
 
     // 1. Verify OTP by creating a session
-    // We need to impersonate the user to verify the OTP
     try {
       final session = await account.createSession(
         userId: userId,
         secret: secret,
       );
-      
-      // If successful, we have a session. We should delete it immediately
-      // so the "backend" doesn't hold a session, although it's stateless.
-      // Actually, we can't easily delete THIS session using the Admin API 
-      // without knowing the sessionId, which createSession returns.
       
       // 2. Force Update Password (Admin)
       await users.updatePassword(
@@ -39,35 +44,25 @@ Future<dynamic> completePasswordReset(context) async {
         password: newPassword,
       );
 
-      // 3. Cleanup: Delete the session we just created to ensure no lingering access
-      // We use the Client (which now has the session cookie? No, dart_appwrite Client doesn't auto-manage cookies like web)
-      // Wait, `createSession` returns a Session object.
-      // To delete it, we can use the Admin API: users.deleteSession(userId, sessionId)
+      // 3. Cleanup: Delete the session we just created
       await users.deleteSession(
         userId: userId,
         sessionId: session.$id,
       );
 
-      return context.res.json({
-        'success': true,
-        'message': 'Password updated successfully',
-      });
+      logger.info('Password reset successful', {'userId': userId});
+      return response.success(null, message: 'Password updated successfully');
 
     } on AppwriteException catch (e) {
       if (e.code == 401) {
-        return context.res.json({
-          'success': false,
-          'message': 'Invalid verification code',
-        }, statusCode: 401);
+        logger.info('Invalid verification code provided', {'userId': userId});
+        return response.error(message: 'Invalid verification code', statusCode: 401);
       }
       rethrow;
     }
 
-  } catch (e) {
-    context.error("Error completing password reset: $e");
-    return context.res.json({
-      'success': false,
-      'message': 'Internal server error: $e',
-    }, statusCode: 500);
+  } catch (e, s) {
+    logger.error("Error completing password reset", e, s);
+    return response.error(message: 'Internal server error', statusCode: 500, details: e.toString());
   }
 }

@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:dart_appwrite/dart_appwrite.dart';
 import 'utils/appwrite_client.dart';
+import 'utils/app_config.dart';
+import 'utils/logger.dart';
+import 'utils/response_helper.dart';
 
 // Import actions
 import 'actions/create_message.dart';
@@ -17,18 +20,25 @@ import 'actions/initiate_password_reset.dart';
 import 'actions/complete_password_reset.dart';
 
 Future<dynamic> main(final context) async {
-  final client = AppwriteClient.init();
-  
+  final logger = Logger(context);
+  final response = ResponseHelper(context);
+
   try {
-    // Parse the request body
+    // 1. Validate Configuration
+    AppConfig.validate();
+
+    // 2. Initialize Client
+    final client = AppwriteClient.init();
+  
+    // 3. Parse Request
     final body = context.req.bodyRaw is String 
         ? jsonDecode(context.req.bodyRaw) 
         : context.req.body;
 
     final action = body['action'];
+    logger.info('Dispatcher received action', {'action': action});
 
-    context.log('Running action: $action');
-
+    // 4. Dispatch Action
     switch (action) {
       case 'create_message':
         return await createMessage(context, client, body);
@@ -54,17 +64,20 @@ Future<dynamic> main(final context) async {
         return await completePasswordReset(context);
       
       default:
-        return context.res.json({
-          'success': false,
-          'error': 'Invalid Action: $action'
-        }, 400);
+        logger.error('Invalid Action requested: $action');
+        return response.error(
+          message: 'Invalid Action: $action',
+          code: 'INVALID_ACTION',
+          statusCode: 400,
+        );
     }
   } catch (e, stack) {
-    context.error('Error executing function: $e');
-    context.error(stack.toString());
-    return context.res.json({
-      'success': false,
-      'error': e.toString()
-    }, 500);
+    logger.error('Unhandled Exception in Main Dispatcher', e, stack);
+    return response.error(
+      message: 'Internal Server Error',
+      code: 'INTERNAL_SERVER_ERROR',
+      statusCode: 500,
+      details: e.toString(),
+    );
   }
 }
