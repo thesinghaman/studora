@@ -48,7 +48,6 @@ import 'package:studora/app/modules/auth/views/signup_screen.dart';
 import 'package:studora/app/modules/auth/views/verification_screen.dart';
 import 'package:studora/app/modules/application_settings/views/terms_conditions_screen.dart';
 import 'package:studora/app/modules/application_settings/views/privacy_policy_screen.dart';
-import 'package:studora/app/bindings/application_binding.dart';
 import 'package:studora/app/modules/onboarding/bindings/onboarding_binding.dart';
 import 'package:studora/app/modules/auth/bindings/auth_binding.dart';
 import 'package:studora/app/modules/application_settings/controllers/legal_document_controller.dart';
@@ -82,7 +81,6 @@ class AppPages {
       name: AppRoutes.INIT_LOADING,
       page: () =>
           const Scaffold(body: Center(child: CupertinoActivityIndicator())),
-      binding: ApplicationBinding(),
     ),
     GetPage(
       name: AppRoutes.SPLASH,

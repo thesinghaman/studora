@@ -210,6 +210,36 @@ class VerificationScreen extends GetView<VerificationController> {
                   ),
                 ),
 
+                SizedBox(height: screenHeight * 0.01),
+
+                // Wrong Email Button
+                AnimatedFadeSlide(
+                  delay: const Duration(milliseconds: 800),
+                  child: TextButton(
+                    onPressed: () {
+                      Get.defaultDialog(
+                        title: "Wrong Email?",
+                        middleText:
+                            "This will delete the current unverified account and let you sign up again.",
+                        textConfirm: "Yes, Delete",
+                        textCancel: "Cancel",
+                        confirmTextColor: Colors.white,
+                        onConfirm: () {
+                          Get.back(); // Close dialog
+                          controller.deleteAccountAndRestart();
+                        },
+                      );
+                    },
+                    child: Text(
+                      "Entered wrong email?",
+                      style: TextStyle(
+                        color: theme.colorScheme.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+
                 SizedBox(height: screenHeight * 0.02),
               ],
             ),

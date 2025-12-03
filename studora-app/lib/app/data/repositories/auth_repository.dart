@@ -276,6 +276,37 @@ class AuthRepository {
         "Full signup flow failed: $e",
         s,
       );
+
+      // Cleanup: If account was created but flow failed (e.g. OTP email error), delete the account
+      if (appwriteAuthUser != null) {
+        try {
+          LoggerService.logInfo(
+            className,
+            methodName,
+            "Attempting to cleanup unverified account for ${appwriteAuthUser.$id}...",
+          );
+          // We can only use the function if we have a session (JWT).
+          // Since loginUser() happens early, we likely have a session.
+          await _authProvider.deleteUnverifiedUserAccount(
+            userId: appwriteAuthUser.$id,
+          );
+          LoggerService.logInfo(
+            className,
+            methodName,
+            "Cleanup successful: Unverified account deleted.",
+          );
+          // Also logout to clear local session
+          // Manually clear local state instead of calling logout() to avoid errors
+          appUser.value = null;
+        } catch (cleanupError) {
+          LoggerService.logError(
+            className,
+            methodName,
+            "Failed to cleanup unverified account: $cleanupError",
+          );
+        }
+      }
+
       rethrow;
     }
   }
@@ -620,9 +651,14 @@ class AuthRepository {
       LoggerService.logInfo(
         className,
         methodName,
-        "Backend deletion successful. Proceeding to logout.",
+        "Backend deletion successful. Clearing local session.",
       );
-      await logout();
+      
+      // Manually clear local state instead of calling logout()
+      // Calling logout() would try to update status and delete session on server,
+      // which fails because the user is already deleted.
+      appUser.value = null;
+
     } catch (e, s) {
       LoggerService.logError(
         className,

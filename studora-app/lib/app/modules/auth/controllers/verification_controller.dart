@@ -174,6 +174,37 @@ class VerificationController extends GetxController {
     Get.offAllNamed(AppRoutes.LOGIN);
   }
 
+  Future<void> deleteAccountAndRestart() async {
+    const String methodName = 'deleteAccountAndRestart';
+    try {
+      isVerifying(true);
+      LoggerService.logInfo(
+        className,
+        methodName,
+        "User requested to delete unverified account and restart.",
+      );
+
+      await _authRepository.deleteUnverifiedCurrentUserAndLogout();
+
+      SnackbarService.showSuccess(
+        title: "Account Deleted",
+        "You can now sign up with the correct email.",
+      );
+
+      Get.offAllNamed(AppRoutes.SIGNUP);
+    } catch (e, s) {
+      LoggerService.logError(
+        className,
+        methodName,
+        "Failed to delete account and restart: $e",
+        s,
+      );
+      SnackbarService.showError("Failed to delete account. Please try again.");
+    } finally {
+      isVerifying(false);
+    }
+  }
+
   @override
   void onClose() {
     otpController.dispose();
