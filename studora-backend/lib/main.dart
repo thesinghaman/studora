@@ -5,6 +5,7 @@ import 'utils/appwrite_client.dart';
 import 'utils/app_config.dart';
 import 'utils/logger.dart';
 import 'utils/response_helper.dart';
+import 'utils/exceptions.dart';
 
 // Import actions
 import 'actions/create_message.dart';
@@ -59,9 +60,9 @@ Future<dynamic> main(final context) async {
       case 'mark_messages_as_read':
         return await markMessagesAsRead(context, client, body);
       case 'initiate_password_reset':
-        return await initiatePasswordReset(context);
+        return await initiatePasswordReset(context, client, body);
       case 'complete_password_reset':
-        return await completePasswordReset(context);
+        return await completePasswordReset(context, client, body);
       
       default:
         logger.error('Invalid Action requested: $action');
@@ -71,6 +72,20 @@ Future<dynamic> main(final context) async {
           statusCode: 400,
         );
     }
+  } on AppError catch (e) {
+    logger.error('AppError: ${e.message}', e);
+    return response.error(
+      message: e.message,
+      statusCode: e.statusCode,
+      code: e.code,
+    );
+  } on AppwriteException catch (e) {
+    logger.error('AppwriteException: ${e.message}', e);
+    return response.error(
+      message: e.message ?? 'Appwrite Error',
+      statusCode: e.code ?? 500,
+      code: 'APPWRITE_ERROR',
+    );
   } catch (e, stack) {
     logger.error('Unhandled Exception in Main Dispatcher', e, stack);
     return response.error(

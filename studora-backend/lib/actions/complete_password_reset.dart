@@ -1,17 +1,23 @@
-import 'dart:convert';
 import 'package:dart_appwrite/dart_appwrite.dart';
-import '../utils/appwrite_client.dart';
 import '../utils/app_config.dart';
 import '../utils/logger.dart';
 import '../utils/response_helper.dart';
+import '../dtos/auth_dtos.dart';
+import '../utils/exceptions.dart';
 
-Future<dynamic> completePasswordReset(context) async {
+Future<dynamic> completePasswordReset(
+  dynamic context,
+  Client client,
+  Map<String, dynamic> body,
+) async {
   final logger = Logger(context);
   final response = ResponseHelper(context);
 
-  // Admin Client (for password update)
-  final adminClient = AppwriteClient.init();
-  final users = Users(adminClient);
+  // 1. Validate Input
+  final request = CompletePasswordResetRequest.fromMap(body);
+
+  // Admin Client (for password update) - reused from main
+  final users = Users(client);
 
   // Public Client (for OTP verification)
   final publicClient = Client()
@@ -19,50 +25,34 @@ Future<dynamic> completePasswordReset(context) async {
       .setProject(AppConfig.projectId);
   final account = Account(publicClient);
 
+  logger.info('Completing password reset', {'userId': request.userId});
+
+  // 2. Verify OTP by creating a session
   try {
-    final body = jsonDecode(context.req.bodyRaw);
-    final String? userId = body['userId'];
-    final String? secret = body['secret'];
-    final String? newPassword = body['newPassword'];
+    final session = await account.createSession(
+      userId: request.userId,
+      secret: request.secret,
+    );
+    
+    // 3. Force Update Password (Admin)
+    await users.updatePassword(
+      userId: request.userId,
+      password: request.newPassword,
+    );
 
-    if (userId == null || secret == null || newPassword == null) {
-      return response.error(message: 'Missing required fields', statusCode: 400);
+    // 4. Cleanup: Delete the session we just created
+    await users.deleteSession(
+      userId: request.userId,
+      sessionId: session.$id,
+    );
+
+    return response.success({'message': 'Password reset successful'});
+
+  } on AppwriteException catch (e) {
+    if (e.code == 401) {
+      logger.info('Invalid verification code provided', {'userId': request.userId});
+      throw UnauthorizedError('Invalid verification code');
     }
-
-    logger.info('Completing password reset', {'userId': userId});
-
-    // 1. Verify OTP by creating a session
-    try {
-      final session = await account.createSession(
-        userId: userId,
-        secret: secret,
-      );
-      
-      // 2. Force Update Password (Admin)
-      await users.updatePassword(
-        userId: userId,
-        password: newPassword,
-      );
-
-      // 3. Cleanup: Delete the session we just created
-      await users.deleteSession(
-        userId: userId,
-        sessionId: session.$id,
-      );
-
-      logger.info('Password reset successful', {'userId': userId});
-      return response.success(null, message: 'Password updated successfully');
-
-    } on AppwriteException catch (e) {
-      if (e.code == 401) {
-        logger.info('Invalid verification code provided', {'userId': userId});
-        return response.error(message: 'Invalid verification code', statusCode: 401);
-      }
-      rethrow;
-    }
-
-  } catch (e, s) {
-    logger.error("Error completing password reset", e, s);
-    return response.error(message: 'Internal server error', statusCode: 500, details: e.toString());
+    rethrow; // Let main.dart handle other Appwrite errors
   }
 }
