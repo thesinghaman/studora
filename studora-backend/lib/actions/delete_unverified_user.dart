@@ -1,72 +1,70 @@
 import 'dart:io';
 import 'package:dart_appwrite/dart_appwrite.dart';
+import 'package:dart_appwrite/models.dart';
+import '../utils/logger.dart';
+import '../utils/response_helper.dart';
+import '../dtos/user_dtos.dart';
+import '../utils/exceptions.dart';
 
-Future<dynamic> deleteUnverifiedUser(dynamic context, Client client, Map<String, dynamic> body) async {
-  // Note: This function requires Admin privileges (API Key with Users.write scope)
-  // The `client` passed here is initialized with the API Key from environment, so it has admin access.
-  
+Future<dynamic> deleteUnverifiedUser(dynamic context, Client client, Map<String, dynamic> data) async {
+  final logger = Logger(context);
+  final response = ResponseHelper(context);
   final users = Users(client);
   final databases = Databases(client);
 
-  final userIdToDelete = body['userIdToDelete'];
-  final jwt = body['jwt'];
+  // 1. Input Validation
+  final request = DeleteUnverifiedUserRequest.fromMap(data);
 
-  if (userIdToDelete == null || userIdToDelete is! String) {
-    return context.res.json({'success': false, 'message': 'Bad Request: `userIdToDelete` is required.'}, 400);
-  }
-  if (jwt == null || jwt is! String) {
-    return context.res.json({'success': false, 'message': 'Bad Request: `jwt` is required.'}, 400);
-  }
-
+  // 2. Verify JWT and User Identity
+  final userClient = Client()
+    .setEndpoint(Platform.environment['APPWRITE_ENDPOINT'] ?? 'https://cloud.appwrite.io/v1')
+    .setProject(Platform.environment['APPWRITE_PROJECT_ID'] ?? '')
+    .setJWT(request.jwt);
+  
+  final userAccount = Account(userClient);
+  
+  // We need to catch errors here specifically for JWT validation
+  User user;
   try {
-    // Verify JWT and User Identity
-    final userClient = Client()
-      .setEndpoint(Platform.environment['APPWRITE_ENDPOINT'] ?? 'https://cloud.appwrite.io/v1')
-      .setProject(Platform.environment['APPWRITE_PROJECT_ID'] ?? '')
-      .setJWT(jwt);
-    
-    final userAccount = Account(userClient);
-    final user = await userAccount.get();
-
-    if (user.$id != userIdToDelete) {
-      context.error('SECURITY ALERT: JWT mismatch for user $userIdToDelete');
-      return context.res.json({'success': false, 'message': 'Forbidden: JWT does not match user ID.'}, 403);
-    }
-
-    if (user.emailVerification) {
-      context.log('Attempted to delete VERIFIED user $userIdToDelete. Blocked.');
-      return context.res.json({'success': false, 'message': 'Bad Request: Cannot delete a verified user account.'}, 400);
-    }
-
-    context.log('JWT validated for unverified user ${user.$id}. Proceeding.');
-
-    // Delete Database Profile
-    try {
-      await databases.deleteDocument(
-        databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-        collectionId: Platform.environment['APPWRITE_USERS_COLLECTION_ID']!,
-        documentId: userIdToDelete,
-      );
-      context.log('Deleted database profile for $userIdToDelete');
-    } catch (e) {
-      if (e is AppwriteException && e.code == 404) {
-        context.log('Database profile already deleted.');
-      } else {
-        rethrow;
-      }
-    }
-
-    // Delete Auth User
-    await users.delete(userId: userIdToDelete);
-    context.log('Deleted auth record for $userIdToDelete');
-
-    return context.res.json({'success': true, 'message': 'Account permanently deleted.'});
-
+    user = await userAccount.get();
   } catch (e) {
-    context.error('Error deleting unverified user: $e');
     if (e is AppwriteException && e.code == 401) {
-       return context.res.json({'success': false, 'message': 'Forbidden: Invalid session token.'}, 401);
+      throw UnauthorizedError('Invalid session token.');
     }
-    return context.res.json({'success': false, 'message': 'An internal server error occurred.'}, 500);
+    rethrow;
   }
+
+  if (user.$id != request.userIdToDelete) {
+    logger.error('SECURITY ALERT: JWT mismatch for user ${request.userIdToDelete}');
+    throw UnauthorizedError('JWT does not match user ID.');
+  }
+
+  if (user.emailVerification) {
+    logger.info('Attempted to delete VERIFIED user ${request.userIdToDelete}. Blocked.');
+    throw ValidationError('Cannot delete a verified user account.');
+  }
+
+  logger.info('JWT validated for unverified user ${user.$id}. Proceeding.');
+
+  // 3. Delete Database Profile
+  try {
+    await databases.deleteDocument(
+      databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
+      collectionId: Platform.environment['APPWRITE_USERS_COLLECTION_ID']!,
+      documentId: request.userIdToDelete,
+    );
+    logger.info('Deleted database profile for ${request.userIdToDelete}');
+  } catch (e) {
+    if (e is AppwriteException && e.code == 404) {
+      logger.info('Database profile already deleted.');
+    } else {
+      rethrow;
+    }
+  }
+
+  // 4. Delete Auth User
+  await users.delete(userId: request.userIdToDelete);
+  logger.info('Deleted auth record for ${request.userIdToDelete}');
+
+  return response.success({'message': 'Account permanently deleted.'});
 }

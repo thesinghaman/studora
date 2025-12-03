@@ -114,7 +114,7 @@ class ItemProvider {
         'listingType': itemType
       };
       if (categoryId != null) {
-        payload['categoryId'] = categoryId;
+        payload['categoryIds'] = [categoryId];
       }
       final result = await _appwriteService.functions.createExecution(
         functionId: AppConstants.studoraBackendFunctionId,

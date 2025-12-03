@@ -2,46 +2,45 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:dart_appwrite/dart_appwrite.dart';
 import 'package:dart_appwrite/models.dart';
+import '../utils/logger.dart';
+import '../utils/response_helper.dart';
+import '../dtos/chat_dtos.dart';
+import '../utils/exceptions.dart';
 
-Future<dynamic> deleteConversations(
-    dynamic context, Client client, Map<String, dynamic> body) async {
+Future<dynamic> deleteConversations(dynamic context, Client client, Map<String, dynamic> data) async {
+  final logger = Logger(context);
+  final response = ResponseHelper(context);
   final databases = Databases(client);
   final storage = Storage(client);
 
-  final conversationIds = body['conversationIds'];
-  final userId = body['userId'];
+  // 1. Input Validation
+  final request = DeleteConversationsRequest.fromMap(data);
 
-  if (conversationIds == null || conversationIds is! List || userId == null) {
-    return context.res
-        .json({'success': false, 'error': 'Missing required fields.'}, 400);
+  // Security Check: Ensure the user is the one making the request
+  final headers = context.req.headers as Map<String, dynamic>;
+  final requestingUserId = headers['x-appwrite-user-id'];
+  if (requestingUserId != null && requestingUserId != request.userId) {
+    throw UnauthorizedError('User ID mismatch. You cannot delete conversations for another user.');
   }
 
-  final chatImagesBucketId =
-      Platform.environment['APPWRITE_CHAT_STORAGE_BUCKET_ID'];
+  final chatImagesBucketId = Platform.environment['APPWRITE_CHAT_STORAGE_BUCKET_ID'];
   if (chatImagesBucketId == null) {
-    context.error(
-        'Environment variable APPWRITE_CHAT_STORAGE_BUCKET_ID is not set.');
-    return context.res
-        .json({'success': false, 'error': 'Server configuration error.'}, 500);
+    throw AppError(message: 'Environment variable APPWRITE_CHAT_STORAGE_BUCKET_ID is not set.');
   }
 
-  for (final convoId in conversationIds) {
+  for (final convoId in request.conversationIds) {
     try {
       final conversation = await databases.getDocument(
         databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-        collectionId:
-            Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+        collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
         documentId: convoId,
       );
 
-      List<String> deletedBy =
-          List<String>.from(conversation.data['deletedBy'] ?? []);
-      List<String> visibleTo =
-          List<String>.from(conversation.data['visibleTo'] ?? []);
-      List<String> participants =
-          List<String>.from(conversation.data['participants'] ?? []);
+      List<String> deletedBy = List<String>.from(conversation.data['deletedBy'] ?? []);
+      List<String> visibleTo = List<String>.from(conversation.data['visibleTo'] ?? []);
+      List<String> participants = List<String>.from(conversation.data['participants'] ?? []);
 
-      final otherParticipants = participants.where((p) => p != userId).toList();
+      final otherParticipants = participants.where((p) => p != request.userId).toList();
 
       // Reset unread count
       Map<String, dynamic> unreadCounts = {};
@@ -49,10 +48,9 @@ Future<dynamic> deleteConversations(
         unreadCounts = jsonDecode(conversation.data['unreadCounts'] ?? '{}');
       } catch (_) {}
 
-      if (unreadCounts.containsKey(userId)) {
-        context
-            .log('Resetting unread count for user $userId in convo $convoId');
-        unreadCounts[userId] = 0;
+      if (unreadCounts.containsKey(request.userId)) {
+        logger.info('Resetting unread count for user ${request.userId} in convo $convoId');
+        unreadCounts[request.userId] = 0;
       }
 
       // Add deletion record
@@ -60,9 +58,9 @@ Future<dynamic> deleteConversations(
       for (int i = 0; i < deletedBy.length; i++) {
         try {
           final record = jsonDecode(deletedBy[i]);
-          if (record['userId'] == userId) {
+          if (record['userId'] == request.userId) {
             deletedBy[i] = jsonEncode({
-              'userId': userId,
+              'userId': request.userId,
               'deletedAt': DateTime.now().toIso8601String(),
             });
             recordExists = true;
@@ -73,14 +71,14 @@ Future<dynamic> deleteConversations(
 
       if (!recordExists) {
         deletedBy.add(jsonEncode({
-          'userId': userId,
+          'userId': request.userId,
           'deletedAt': DateTime.now().toIso8601String(),
         }));
       }
 
       // Remove from visibleTo
-      if (visibleTo.contains(userId)) {
-        visibleTo.remove(userId);
+      if (visibleTo.contains(request.userId)) {
+        visibleTo.remove(request.userId);
       }
 
       // Check for Final Delete
@@ -92,11 +90,10 @@ Future<dynamic> deleteConversations(
         } catch (_) {}
       }
 
-      final isFinalDelete =
-          otherParticipants.every((p) => deletedUserIds.contains(p));
+      final isFinalDelete = otherParticipants.every((p) => deletedUserIds.contains(p));
 
       if (isFinalDelete) {
-        context.log('Performing final delete for conversation $convoId...');
+        logger.info('Performing final delete for conversation $convoId...');
 
         // Delete messages
         List<Document> messages = [];
@@ -110,8 +107,7 @@ Future<dynamic> deleteConversations(
 
           final res = await databases.listDocuments(
             databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-            collectionId:
-                Platform.environment['APPWRITE_MESSAGES_COLLECTION_ID']!,
+            collectionId: Platform.environment['APPWRITE_MESSAGES_COLLECTION_ID']!,
             queries: queries,
           );
           messages.addAll(res.documents);
@@ -130,25 +126,23 @@ Future<dynamic> deleteConversations(
                 await storage.deleteFile(
                     bucketId: chatImagesBucketId, fileId: fileId);
               } catch (e) {
-                context.error('Failed to delete image $fileId: $e');
+                logger.error('Failed to delete image $fileId', e);
               }
             }
           }
           await databases.deleteDocument(
             databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-            collectionId:
-                Platform.environment['APPWRITE_MESSAGES_COLLECTION_ID']!,
+            collectionId: Platform.environment['APPWRITE_MESSAGES_COLLECTION_ID']!,
             documentId: message.$id,
           );
         }
 
         await databases.deleteDocument(
           databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-          collectionId:
-              Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+          collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
           documentId: convoId,
         );
-        context.log('Permanently deleted conversation $convoId');
+        logger.info('Permanently deleted conversation $convoId');
       } else {
         // Soft delete
         final newPermissions = visibleTo
@@ -161,8 +155,7 @@ Future<dynamic> deleteConversations(
 
         await databases.updateDocument(
           databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-          collectionId:
-              Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+          collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
           documentId: convoId,
           data: {
             'deletedBy': deletedBy,
@@ -171,13 +164,13 @@ Future<dynamic> deleteConversations(
           },
           permissions: newPermissions.toSet().toList(),
         );
-        context.log('Soft-deleted conversation $convoId for user $userId');
+        logger.info('Soft-deleted conversation $convoId for user ${request.userId}');
       }
     } catch (e) {
-      context.error('Failed to process deletion for conversation $convoId: $e');
+      logger.error('Failed to process deletion for conversation $convoId', e);
+      // Continue to next conversation even if one fails
     }
   }
 
-  return context.res
-      .json({'success': true, 'message': 'Deletion process completed.'});
+  return response.success({'message': 'Deletion process completed.'});
 }

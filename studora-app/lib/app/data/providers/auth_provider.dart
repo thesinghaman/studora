@@ -629,7 +629,8 @@ class AuthProvider {
           'action': 'complete_password_reset',
           'userId': userId,
           'secret': secret,
-          'newPassword': newPassword,
+          'password': newPassword,
+          'confirmPassword': newPassword,
         }),
       );
 

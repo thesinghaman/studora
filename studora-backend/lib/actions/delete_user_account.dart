@@ -3,127 +3,114 @@ import 'dart:io';
 import 'package:dart_appwrite/dart_appwrite.dart';
 import 'package:dart_appwrite/models.dart';
 import 'package:http/http.dart' as http;
+import '../utils/logger.dart';
+import '../utils/response_helper.dart';
+import '../dtos/user_dtos.dart';
+import '../utils/exceptions.dart';
 
-Future<dynamic> deleteUserAccount(dynamic context, Client client, Map<String, dynamic> body) async {
+Future<dynamic> deleteUserAccount(dynamic context, Client client, Map<String, dynamic> data) async {
+  final logger = Logger(context);
+  final response = ResponseHelper(context);
   final databases = Databases(client);
   final storage = Storage(client);
   final users = Users(client);
 
-  final userId = body['userId'];
-  final password = body['password'];
+  // 1. Input Validation
+  final request = DeleteUserAccountRequest.fromMap(data);
 
-  if (userId == null || password == null) {
-    return context.res.json({'success': false, 'message': 'User ID and password are required.'});
+  // 2. Verify Password
+  // Since dart_appwrite (Server SDK) doesn't have Account service to verify password,
+  // we use a raw HTTP request to the Client API endpoint.
+  final userDoc = await databases.getDocument(
+    databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
+    collectionId: Platform.environment['APPWRITE_USERS_COLLECTION_ID']!,
+    documentId: request.userId,
+  );
+  final email = userDoc.data['email'];
+
+  final endpoint = Platform.environment['APPWRITE_ENDPOINT'] ?? 'https://cloud.appwrite.io/v1';
+  final projectId = Platform.environment['APPWRITE_PROJECT_ID']!;
+
+  final verifyResponse = await http.post(
+    Uri.parse('$endpoint/account/sessions/email'),
+    headers: {
+      'X-Appwrite-Project': projectId,
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'email': email,
+      'password': request.password,
+    }),
+  );
+
+  if (verifyResponse.statusCode >= 400) {
+    logger.info('Password verification failed: ${verifyResponse.body}');
+    throw ValidationError('Incorrect password. Please try again.');
   }
+  
+  logger.info('Password verified for user ${request.userId}. Starting deletion process.');
 
-  try {
-    // 1. Verify Password
-    // Since dart_appwrite (Server SDK) doesn't have Account service to verify password,
-    // we use a raw HTTP request to the Client API endpoint.
-    final userDoc = await databases.getDocument(
-      databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-      collectionId: Platform.environment['APPWRITE_USERS_COLLECTION_ID']!,
-      documentId: userId,
-    );
-    final email = userDoc.data['email'];
-
-    final endpoint = Platform.environment['APPWRITE_ENDPOINT'] ?? 'https://cloud.appwrite.io/v1';
-    final projectId = Platform.environment['APPWRITE_PROJECT_ID']!;
-
-    final verifyResponse = await http.post(
-      Uri.parse('$endpoint/account/sessions/email'),
-      headers: {
-        'X-Appwrite-Project': projectId,
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-      }),
-    );
-
-    if (verifyResponse.statusCode >= 400) {
-      context.log('Password verification failed: ${verifyResponse.body}');
-      return context.res.json({
-        'success': false,
-        'message': 'Incorrect password. Please try again.',
-      });
-    }
-    
-    context.log('Password verified for user $userId. Starting deletion process.');
-
-    // 2. Delete Profile Picture (Avatar)
-    final avatarFileId = userDoc.data['userAvatarFileId'];
-    if (avatarFileId != null) {
-      try {
-        await storage.deleteFile(
-          bucketId: Platform.environment['APPWRITE_AVATARS_BUCKET_ID']!,
-          fileId: avatarFileId,
-        );
-        context.log('Deleted avatar $avatarFileId.');
-      } catch (e) {
-        // Ignore 404
-        if (e is AppwriteException && e.code == 404) {
-          // ok
-        } else {
-          context.error('Could not delete avatar: $e');
-        }
+  // 3. Delete Profile Picture (Avatar)
+  final avatarFileId = userDoc.data['userAvatarFileId'];
+  if (avatarFileId != null) {
+    try {
+      await storage.deleteFile(
+        bucketId: Platform.environment['APPWRITE_AVATARS_BUCKET_ID']!,
+        fileId: avatarFileId,
+      );
+      logger.info('Deleted avatar $avatarFileId.');
+    } catch (e) {
+      // Ignore 404
+      if (e is AppwriteException && e.code == 404) {
+        // ok
+      } else {
+        logger.error('Could not delete avatar', e);
       }
     }
-
-    // 3. Delete User's Ads (Items)
-    await _deleteUserDocuments(
-      context, 
-      databases, 
-      storage, 
-      Platform.environment['APPWRITE_ITEMS_COLLECTION_ID']!, 
-      'sellerId', 
-      userId,
-      Platform.environment['APPWRITE_ITEMS_BUCKET_ID']!
-    );
-
-    // 4. Delete User's Lost & Found Posts
-    await _deleteUserDocuments(
-      context, 
-      databases, 
-      storage, 
-      Platform.environment['APPWRITE_LOSTFOUND_COLLECTION_ID']!, 
-      'reporterId', 
-      userId,
-      Platform.environment['APPWRITE_ITEMS_BUCKET_ID']!
-    );
-
-    // 5. Mark User's Conversations as Deleted
-    await _markConversationsDeleted(context, databases, userId);
-
-    // 6. Delete User's Profile Document
-    await databases.deleteDocument(
-      databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-      collectionId: Platform.environment['APPWRITE_USERS_COLLECTION_ID']!,
-      documentId: userId,
-    );
-    context.log('Deleted user profile document $userId.');
-
-    // 7. Delete Auth User
-    await users.delete(userId: userId);
-    context.log('Successfully deleted auth user $userId.');
-
-    return context.res.json({
-      'success': true,
-      'message': 'User account deleted successfully.',
-    });
-
-  } catch (e) {
-    context.error('Error during user deletion: $e');
-    return context.res.json({
-      'success': false,
-      'message': 'A server error occurred during account deletion.',
-    });
   }
+
+  // 4. Delete User's Ads (Items)
+  await _deleteUserDocuments(
+    logger, 
+    databases, 
+    storage, 
+    Platform.environment['APPWRITE_ITEMS_COLLECTION_ID']!, 
+    'sellerId', 
+    request.userId,
+    Platform.environment['APPWRITE_ITEMS_BUCKET_ID']!
+  );
+
+  // 5. Delete User's Lost & Found Posts
+  await _deleteUserDocuments(
+    logger, 
+    databases, 
+    storage, 
+    Platform.environment['APPWRITE_LOSTFOUND_COLLECTION_ID']!, 
+    'reporterId', 
+    request.userId,
+    Platform.environment['APPWRITE_ITEMS_BUCKET_ID']!
+  );
+
+  // 6. Mark User's Conversations as Deleted
+  await _markConversationsDeleted(logger, databases, request.userId);
+
+  // 7. Delete User's Profile Document
+  await databases.deleteDocument(
+    databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
+    collectionId: Platform.environment['APPWRITE_USERS_COLLECTION_ID']!,
+    documentId: request.userId,
+  );
+  logger.info('Deleted user profile document ${request.userId}.');
+
+  // 8. Delete Auth User
+  await users.delete(userId: request.userId);
+  logger.info('Successfully deleted auth user ${request.userId}.');
+
+  return response.success({'message': 'User account deleted successfully.'});
 }
 
 Future<void> _deleteUserDocuments(
-  dynamic context,
+  Logger logger,
   Databases databases,
   Storage storage,
   String collectionId,
@@ -145,7 +132,7 @@ Future<void> _deleteUserDocuments(
     hasMore = response.documents.length == 100;
 
     for (final doc in response.documents) {
-      await _deleteImagesForDocument(context, doc, storage, bucketId);
+      await _deleteImagesForDocument(logger, doc, storage, bucketId);
       await databases.deleteDocument(
         databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
         collectionId: collectionId,
@@ -154,13 +141,13 @@ Future<void> _deleteUserDocuments(
     }
     
     if (response.documents.isNotEmpty) {
-      context.log('Processed batch of ${response.documents.length} items from $collectionId');
+      logger.info('Processed batch of ${response.documents.length} items from $collectionId');
     }
   }
 }
 
 Future<void> _deleteImagesForDocument(
-  dynamic context,
+  Logger logger,
   Document doc,
   Storage storage,
   String bucketId,
@@ -186,7 +173,7 @@ Future<void> _deleteImagesForDocument(
             fileIdsToDelete.add(segments[filesIndex + 1]);
           }
         } catch (e) {
-          context.error('Failed to parse URL $url: $e');
+          logger.error('Failed to parse URL $url', e);
         }
       }
     }
@@ -194,19 +181,19 @@ Future<void> _deleteImagesForDocument(
 
   if (fileIdsToDelete.isEmpty) return;
 
-  context.log('Deleting ${fileIdsToDelete.length} images for ${doc.$id}');
+  logger.info('Deleting ${fileIdsToDelete.length} images for ${doc.$id}');
   
   await Future.wait(fileIdsToDelete.map((fileId) async {
     try {
       await storage.deleteFile(bucketId: bucketId, fileId: fileId);
     } catch (e) {
       if (e is AppwriteException && e.code == 404) return;
-      context.error('Failed to delete file $fileId: $e');
+      logger.error('Failed to delete file $fileId', e);
     }
   }));
 }
 
-Future<void> _markConversationsDeleted(dynamic context, Databases databases, String userId) async {
+Future<void> _markConversationsDeleted(Logger logger, Databases databases, String userId) async {
   // Note: Limit 5000 might be too high for one go, but following original logic
   // We use a loop to ensure we get all conversations.
   
@@ -260,5 +247,5 @@ Future<void> _markConversationsDeleted(dynamic context, Databases databases, Str
       );
     }
   }
-  context.log('Marked ${allDocs.length} conversations as deleted.');
+  logger.info('Marked ${allDocs.length} conversations as deleted.');
 }

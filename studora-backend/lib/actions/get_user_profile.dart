@@ -1,30 +1,31 @@
 import 'dart:io';
 import 'package:dart_appwrite/dart_appwrite.dart';
+import '../utils/logger.dart';
+import '../utils/response_helper.dart';
+import '../dtos/user_dtos.dart';
+import '../utils/exceptions.dart';
 
-Future<dynamic> getUserProfile(dynamic context, Client client, Map<String, dynamic> body) async {
+Future<dynamic> getUserProfile(dynamic context, Client client, Map<String, dynamic> data) async {
+  final logger = Logger(context);
+  final response = ResponseHelper(context);
   final databases = Databases(client);
 
-  if (context.req.method != 'POST') {
-    return context.res.json({'success': false, 'message': 'Method not allowed'}, 405);
-  }
+  // 1. Input Validation
+  final request = GetUserProfileRequest.fromMap(data);
 
-  final targetUserId = body['targetUserId'];
-  if (targetUserId == null) {
-    return context.res.json({'success': false, 'message': 'Missing required field: targetUserId.'}, 400);
-  }
-
+  // 2. Get Requesting User ID from Headers (passed by Appwrite Function)
   final headers = context.req.headers as Map<String, dynamic>;
   final requestingUserId = headers['x-appwrite-user-id'];
 
   if (requestingUserId == null) {
-    return context.res.json({'success': false, 'message': 'Authentication required.'}, 401);
+    throw UnauthorizedError('Authentication required.');
   }
 
   try {
     final targetUserDoc = await databases.getDocument(
       databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
       collectionId: Platform.environment['APPWRITE_USERS_COLLECTION_ID']!,
-      documentId: targetUserId,
+      documentId: request.targetUserId,
     );
 
     final blockedUsers = List<String>.from(targetUserDoc.data['blockedUsers'] ?? []);
@@ -33,7 +34,7 @@ Future<dynamic> getUserProfile(dynamic context, Client client, Map<String, dynam
     Map<String, dynamic> userProfile;
 
     if (isRequesterBlocked) {
-      context.log('Request from blocked user $requestingUserId to $targetUserId.');
+      logger.info('Request from blocked user $requestingUserId to ${request.targetUserId}.');
       userProfile = {
         'userId': targetUserDoc.$id,
         'userName': targetUserDoc.data['userName'],
@@ -47,7 +48,7 @@ Future<dynamic> getUserProfile(dynamic context, Client client, Map<String, dynam
         'isBlocked': true,
       };
     } else {
-      context.log('Request from user $requestingUserId to $targetUserId.');
+      logger.info('Request from user $requestingUserId to ${request.targetUserId}.');
       final showLastSeen = targetUserDoc.data['showLastSeen'] ?? false;
       userProfile = {
         'userId': targetUserDoc.$id,
@@ -64,13 +65,12 @@ Future<dynamic> getUserProfile(dynamic context, Client client, Map<String, dynam
       };
     }
 
-    return context.res.json({'success': true, 'data': userProfile});
+    return response.success({'data': userProfile});
 
   } catch (e) {
-    context.error('Error fetching user profile for $targetUserId: $e');
     if (e is AppwriteException && e.code == 404) {
-      return context.res.json({'success': false, 'message': 'User not found.'}, 404);
+      throw NotFoundError('User not found.');
     }
-    return context.res.json({'success': false, 'message': 'An error occurred on the server.'}, 500);
+    rethrow;
   }
 }

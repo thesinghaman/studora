@@ -1,41 +1,49 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:dart_appwrite/dart_appwrite.dart';
+import '../utils/logger.dart';
+import '../utils/response_helper.dart';
+import '../dtos/chat_dtos.dart';
+import '../utils/exceptions.dart';
 
 Future<dynamic> markMessagesAsRead(dynamic context, Client client, Map<String, dynamic> body) async {
+  final logger = Logger(context);
+  final response = ResponseHelper(context);
   final databases = Databases(client);
 
-  final conversationId = body['conversationId'];
-  final userId = body['userId'];
+  // 1. Input Validation
+  final request = MarkMessagesAsReadRequest.fromMap(body);
 
-  if (conversationId == null || userId == null) {
-    return context.res.json({'success': false, 'error': 'Missing conversationId or userId.'}, 400);
+  // Security Check: Ensure the user is the one making the request
+  final headers = context.req.headers as Map<String, dynamic>;
+  final requestingUserId = headers['x-appwrite-user-id'];
+  if (requestingUserId != null && requestingUserId != request.userId) {
+    throw UnauthorizedError('User ID mismatch. You cannot mark messages as read for another user.');
   }
 
+  // 2. Find unread messages sent by others
+  final messageList = await databases.listDocuments(
+    databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
+    collectionId: Platform.environment['APPWRITE_MESSAGES_COLLECTION_ID']!,
+    queries: [
+      Query.equal('conversationId', request.conversationId),
+      Query.notEqual('status', 'read'),
+      Query.notEqual('senderId', request.userId),
+    ],
+  );
+
+  // 3. Filter by permission
+  final readerPermission = 'read("user:${request.userId}")';
+  final messagesToUpdate = messageList.documents.where((doc) {
+    return doc.$permissions.contains(readerPermission);
+  }).toList();
+
+  // 4. Update Conversation Unread Count
   try {
-    // 1. Find unread messages sent by others
-    final messageList = await databases.listDocuments(
-      databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-      collectionId: Platform.environment['APPWRITE_MESSAGES_COLLECTION_ID']!,
-      queries: [
-        Query.equal('conversationId', conversationId),
-        Query.notEqual('status', 'read'),
-        Query.notEqual('senderId', userId),
-      ],
-    );
-
-    // 2. Filter by permission (Dart SDK doesn't expose $permissions in Document model easily? 
-    // Actually it does: doc.$permissions)
-    final readerPermission = 'read("user:$userId")';
-    final messagesToUpdate = messageList.documents.where((doc) {
-      return doc.$permissions.contains(readerPermission);
-    }).toList();
-
-    // 3. Update Conversation Unread Count
     final conversation = await databases.getDocument(
       databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
       collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
-      documentId: conversationId,
+      documentId: request.conversationId,
     );
 
     Map<String, dynamic> unreadCounts = {};
@@ -43,46 +51,46 @@ Future<dynamic> markMessagesAsRead(dynamic context, Client client, Map<String, d
       unreadCounts = jsonDecode(conversation.data['unreadCounts'] ?? '{}');
     } catch (_) {}
 
-    bool needsCountUpdate = (unreadCounts[userId] ?? 0) != 0;
+    bool needsCountUpdate = (unreadCounts[request.userId] ?? 0) != 0;
     if (needsCountUpdate) {
-      unreadCounts[userId] = 0;
-    }
-
-    // 4. Execute Updates
-    final futures = <Future>[];
-
-    if (needsCountUpdate) {
-      futures.add(databases.updateDocument(
+      unreadCounts[request.userId] = 0;
+      await databases.updateDocument(
         databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
         collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
-        documentId: conversationId,
+        documentId: request.conversationId,
         data: {'unreadCounts': jsonEncode(unreadCounts)},
-      ));
+      );
     }
-
-    for (final msg in messagesToUpdate) {
-      futures.add(databases.updateDocument(
-        databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-        collectionId: Platform.environment['APPWRITE_MESSAGES_COLLECTION_ID']!,
-        documentId: msg.$id,
-        data: {'status': 'read'},
-      ));
-    }
-
-    if (futures.isNotEmpty) {
-      await Future.wait(futures);
-      context.log('Updated ${messagesToUpdate.length} messages and reset count for $userId');
-    } else {
-      context.log('No updates needed for $userId');
-    }
-
-    return context.res.json({
-      'success': true, 
-      'message': 'Processed read status for ${messagesToUpdate.length} messages.'
-    });
-
   } catch (e) {
-    context.error('Failed to mark messages as read: $e');
-    return context.res.json({'success': false, 'error': e.toString()}, 500);
+    logger.error('Failed to update conversation unread count', e);
+    // Continue to update messages
   }
+
+  // 5. Update Messages Status
+  final futures = <Future>[];
+  for (final msg in messagesToUpdate) {
+    futures.add(databases.updateDocument(
+      databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
+      collectionId: Platform.environment['APPWRITE_MESSAGES_COLLECTION_ID']!,
+      documentId: msg.$id,
+      data: {'status': 'read'},
+    ));
+  }
+
+  if (futures.isNotEmpty) {
+    try {
+      await Future.wait(futures);
+      logger.info('Updated ${messagesToUpdate.length} messages and reset count for ${request.userId}');
+    } catch (e) {
+      logger.error('Failed to update some messages', e);
+      throw AppError(message: 'Failed to update message status', statusCode: 500);
+    }
+  } else {
+    logger.info('No updates needed for ${request.userId}');
+  }
+
+  return response.success({
+    'updatedCount': messagesToUpdate.length,
+    'message': 'Processed read status for ${messagesToUpdate.length} messages.'
+  });
 }

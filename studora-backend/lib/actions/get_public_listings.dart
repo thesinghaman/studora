@@ -1,83 +1,77 @@
 import 'dart:io';
 import 'package:dart_appwrite/dart_appwrite.dart';
 import 'package:dart_appwrite/models.dart';
+import '../utils/logger.dart';
+import '../utils/response_helper.dart';
+import '../dtos/listing_dtos.dart';
+import '../utils/exceptions.dart';
 
-Future<dynamic> getPublicListings(dynamic context, Client client, Map<String, dynamic> body) async {
+Future<dynamic> getPublicListings(dynamic context, Client client, Map<String, dynamic> data) async {
+  final logger = Logger(context);
+  final response = ResponseHelper(context);
   final databases = Databases(client);
 
-  final listingType = body['listingType'];
-  final collegeId = body['collegeId'];
-  final categoryIds = body['categoryIds'];
-  final searchQuery = body['searchQuery'];
-  final limit = body['limit'] ?? 15;
-  final offset = body['offset'] ?? 0;
-  final sortBy = body['sortBy'] ?? 'date_desc';
-  final minPrice = body['minPrice'];
-  final maxPrice = body['maxPrice'];
-  final startDate = body['startDate'];
-  final endDate = body['endDate'];
+  // 1. Input Validation
+  final request = GetPublicListingsRequest.fromMap(data);
   
   // In Dart Runtime, headers are in context.req.headers
-  // Note: Headers keys are usually lowercase in some environments, but let's check standard.
   final headers = context.req.headers as Map<String, dynamic>;
   final requestingUserId = headers['x-appwrite-user-id'];
 
   final baseQueries = [Query.equal('isActive', true)];
 
-  if (minPrice is num) {
-    baseQueries.add(Query.greaterThanEqual('price', minPrice));
+  if (request.minPrice != null) {
+    baseQueries.add(Query.greaterThanEqual('price', request.minPrice));
   }
-  if (maxPrice is num && maxPrice > 0) {
-    baseQueries.add(Query.lessThanEqual('price', maxPrice));
+  if (request.maxPrice != null && request.maxPrice! > 0) {
+    baseQueries.add(Query.lessThanEqual('price', request.maxPrice));
   }
 
   String collectionId;
   String dateAttribute;
 
-  if (listingType == 'marketplace' || listingType == 'rental') {
+  if (request.listingType == 'marketplace' || request.listingType == 'rental') {
     collectionId = Platform.environment['APPWRITE_ITEMS_COLLECTION_ID']!;
     dateAttribute = 'datePosted';
     baseQueries.add(Query.equal('adStatus', 'Active'));
-    if (listingType == 'marketplace') {
+    if (request.listingType == 'marketplace') {
       baseQueries.add(Query.equal('isRental', false));
     }
-    if (listingType == 'rental') {
+    if (request.listingType == 'rental') {
       baseQueries.add(Query.equal('isRental', true));
     }
-  } else if (listingType == 'lost' || listingType == 'found') {
+  } else if (request.listingType == 'lost' || request.listingType == 'found') {
     collectionId = Platform.environment['APPWRITE_LOSTFOUND_COLLECTION_ID']!;
     dateAttribute = 'dateReported';
-    baseQueries.add(Query.equal('type', listingType));
+    baseQueries.add(Query.equal('type', request.listingType));
   } else {
-    return context.res.json({'success': false, 'message': 'Invalid listingType: $listingType'}, 400);
+    throw ValidationError('Invalid listingType: ${request.listingType}');
   }
 
-  if (collegeId != null) {
+  if (request.collegeId != null) {
     final collegeField = collectionId == Platform.environment['APPWRITE_ITEMS_COLLECTION_ID']
         ? 'collegeId'
         : 'reporterCollegeId';
-    baseQueries.add(Query.equal(collegeField, collegeId));
+    baseQueries.add(Query.equal(collegeField, request.collegeId));
   }
 
-  if (categoryIds != null && categoryIds is List && categoryIds.isNotEmpty) {
-    // Query.equal with array value works as "contains any" in Appwrite? 
-    // No, Query.equal('attr', [v1, v2]) matches if attr is one of v1, v2.
-    baseQueries.add(Query.equal('categoryId', categoryIds));
-    context.log('Applying category filter: $categoryIds');
+  if (request.categoryIds != null && request.categoryIds!.isNotEmpty) {
+    baseQueries.add(Query.equal('categoryId', request.categoryIds));
+    logger.info('Applying category filter: ${request.categoryIds}');
   }
 
-  if (startDate != null) {
-    baseQueries.add(Query.greaterThanEqual(dateAttribute, startDate));
+  if (request.startDate != null) {
+    baseQueries.add(Query.greaterThanEqual(dateAttribute, request.startDate));
   }
-  if (endDate != null) {
-    baseQueries.add(Query.lessThanEqual(dateAttribute, endDate));
+  if (request.endDate != null) {
+    baseQueries.add(Query.lessThanEqual(dateAttribute, request.endDate));
   }
 
   List<Document> documents = [];
 
-  if (searchQuery != null && (searchQuery as String).trim().isNotEmpty) {
+  if (request.searchQuery != null && request.searchQuery!.trim().isNotEmpty) {
     final searchLimit = 250;
-    final q = searchQuery.trim();
+    final q = request.searchQuery!.trim();
     
     // Parallel search queries
     final futures = <Future<DocumentList>>[
@@ -111,7 +105,7 @@ Future<dynamic> getPublicListings(dynamic context, Client client, Map<String, dy
 
     // Sort in memory
     documents.sort((a, b) {
-      switch (sortBy) {
+      switch (request.sortBy) {
         case 'price_asc':
           return ((a.data['price'] ?? 0) as num).compareTo((b.data['price'] ?? 0) as num);
         case 'price_desc':
@@ -125,15 +119,15 @@ Future<dynamic> getPublicListings(dynamic context, Client client, Map<String, dy
     });
 
     // Pagination in memory
-    if (offset < documents.length) {
-      documents = documents.sublist(offset, (offset + limit < documents.length) ? offset + limit : documents.length);
+    if (request.offset < documents.length) {
+      documents = documents.sublist(request.offset, (request.offset + request.limit < documents.length) ? request.offset + request.limit : documents.length);
     } else {
       documents = [];
     }
 
   } else {
     // Standard DB Query
-    switch (sortBy) {
+    switch (request.sortBy) {
       case 'price_asc':
         baseQueries.add(Query.orderAsc('price'));
         break;
@@ -152,7 +146,7 @@ Future<dynamic> getPublicListings(dynamic context, Client client, Map<String, dy
     final response = await databases.listDocuments(
       databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
       collectionId: collectionId,
-      queries: [...baseQueries, Query.limit(limit), Query.offset(offset)],
+      queries: [...baseQueries, Query.limit(request.limit), Query.offset(request.offset)],
     );
     documents = response.documents;
   }
@@ -178,7 +172,7 @@ Future<dynamic> getPublicListings(dynamic context, Client client, Map<String, dy
       filteredDocs = documents.where((doc) => !iHaveBlockedThem.contains(doc.data[authorField])).toList();
 
     } catch (e) {
-      context.error('Error fetching requesting user profile: $e');
+      logger.error('Error fetching requesting user profile', e);
       // Continue with unfiltered docs or fail? Let's continue but log error.
     }
   }
@@ -207,7 +201,7 @@ Future<dynamic> getPublicListings(dynamic context, Client client, Map<String, dy
         authorMap[profile.$id] = profile;
       }
     } catch (e) {
-      context.error('Error fetching author profiles: $e');
+      logger.error('Error fetching author profiles', e);
     }
   }
 
@@ -251,8 +245,5 @@ Future<dynamic> getPublicListings(dynamic context, Client client, Map<String, dy
     return docMap;
   }).toList();
 
-  return context.res.json({
-    'success': true,
-    'data': results
-  });
+  return response.success({'data': results});
 }
