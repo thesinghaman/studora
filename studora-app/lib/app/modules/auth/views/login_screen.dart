@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:studora/app/config/navigation/app_routes.dart';
 import 'package:studora/app/modules/auth/controllers/login_controller.dart';
 import 'package:studora/app/shared_components/widgets/animated_fade_slide.dart';
 
@@ -122,7 +123,24 @@ class LoginScreen extends GetView<LoginController> {
                       ),
                     ),
                   ),
-                  SizedBox(height: screenHeight * 0.03),
+                  SizedBox(height: screenHeight * 0.01),
+                  AnimatedFadeSlide(
+                    delay: const Duration(milliseconds: 550),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Get.toNamed(AppRoutes.FORGOT_PASSWORD),
+                        child: Text(
+                          "Forgot Password?",
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.02),
                   AnimatedFadeSlide(
                     delay: const Duration(milliseconds: 600),
                     child: Obx(

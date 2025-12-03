@@ -8,6 +8,7 @@ class AppRoutes {
   static const SIGNUP = '/signup';
   static const PRIVACY = '/privacy';
   static const VERIFICATION = '/verification';
+  static const FORGOT_PASSWORD = '/forgot-password';
   static const MAIN_NAVIGATION = '/main';
   static const EXISTING_REPORT_DETAIL = '/existing-report-detail';
   static const BLOCKED_USERS = '/blocked-users';

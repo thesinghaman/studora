@@ -46,6 +46,7 @@ import 'package:studora/app/modules/onboarding/views/onboarding_screen.dart';
 import 'package:studora/app/modules/auth/views/login_screen.dart';
 import 'package:studora/app/modules/auth/views/signup_screen.dart';
 import 'package:studora/app/modules/auth/views/verification_screen.dart';
+import 'package:studora/app/modules/auth/views/forgot_password_view.dart';
 import 'package:studora/app/modules/application_settings/views/terms_conditions_screen.dart';
 import 'package:studora/app/modules/application_settings/views/privacy_policy_screen.dart';
 import 'package:studora/app/modules/onboarding/bindings/onboarding_binding.dart';
@@ -98,10 +99,9 @@ class AppPages {
       binding: AuthBinding(),
     ),
     GetPage(
-      name: AppRoutes.PRIVACY,
-      page: () => const PrivacyView(),
-      binding: PrivacyBinding(),
-      transition: Transition.rightToLeft,
+      name: AppRoutes.FORGOT_PASSWORD,
+      page: () => const ForgotPasswordView(),
+      binding: AuthBinding(),
     ),
     GetPage(
       name: AppRoutes.SIGNUP,

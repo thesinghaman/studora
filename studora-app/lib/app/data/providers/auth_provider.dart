@@ -590,4 +590,55 @@ class AuthProvider {
       rethrow;
     }
   }
+
+  Future<String> initiatePasswordReset(String email) async {
+    const String methodName = 'initiatePasswordReset';
+    try {
+      final execution = await _appwriteService.functions.createExecution(
+        functionId: AppConstants.studoraBackendFunctionId,
+        body: jsonEncode({
+          'action': 'initiate_password_reset',
+          'email': email,
+        }),
+      );
+
+      final response = jsonDecode(execution.responseBody);
+      LoggerService.logInfo(className, methodName, "Response: $response");
+      if (execution.responseStatusCode == 200 && response['success'] == true) {
+        return response['userId'];
+      } else {
+        throw response['message'] ?? 'Failed to initiate password reset';
+      }
+    } catch (e) {
+      LoggerService.logError(className, methodName, "Error: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> completePasswordReset({
+    required String userId,
+    required String secret,
+    required String newPassword,
+  }) async {
+    const String methodName = 'completePasswordReset';
+    try {
+      final execution = await _appwriteService.functions.createExecution(
+        functionId: AppConstants.studoraBackendFunctionId,
+        body: jsonEncode({
+          'action': 'complete_password_reset',
+          'userId': userId,
+          'secret': secret,
+          'newPassword': newPassword,
+        }),
+      );
+
+      final response = jsonDecode(execution.responseBody);
+      if (execution.responseStatusCode != 200 || response['success'] != true) {
+        throw response['message'] ?? 'Failed to reset password';
+      }
+    } catch (e) {
+      LoggerService.logError(className, methodName, "Error: $e");
+      rethrow;
+    }
+  }
 }

@@ -13,6 +13,8 @@ import 'actions/get_user_profile.dart';
 import 'actions/mark_messages_as_read.dart';
 import 'actions/notify_on_new_message.dart';
 import 'actions/update_conversations.dart';
+import 'actions/initiate_password_reset.dart';
+import 'actions/complete_password_reset.dart';
 
 Future<dynamic> main(final context) async {
   final client = AppwriteClient.init();
@@ -46,6 +48,10 @@ Future<dynamic> main(final context) async {
         return await getUserProfile(context, client, body);
       case 'mark_messages_as_read':
         return await markMessagesAsRead(context, client, body);
+      case 'initiate_password_reset':
+        return await initiatePasswordReset(context);
+      case 'complete_password_reset':
+        return await completePasswordReset(context);
       
       default:
         return context.res.json({

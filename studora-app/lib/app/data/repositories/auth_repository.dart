@@ -814,4 +814,20 @@ class AuthRepository {
       rethrow;
     }
   }
+
+  Future<String> initiatePasswordReset(String email) async {
+    return await _authProvider.initiatePasswordReset(email);
+  }
+
+  Future<void> completePasswordReset({
+    required String userId,
+    required String secret,
+    required String newPassword,
+  }) async {
+    await _authProvider.completePasswordReset(
+      userId: userId,
+      secret: secret,
+      newPassword: newPassword,
+    );
+  }
 }
