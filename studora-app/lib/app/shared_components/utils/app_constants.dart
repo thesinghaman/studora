@@ -47,6 +47,9 @@ class AppConstants {
   static String getPublicsListingsFunctionId =
       dotenv.env['GET_PUBLIC_LISTINGS_FUNCTION_ID'] ?? '';
 
+  static String studoraBackendFunctionId =
+      dotenv.env['STUDORA_BACKEND_FUNCTION_ID'] ?? '';
+
   static const String categoryTypeSale = 'sale';
   static const String categoryTypeRental = 'rental';
   static const String categoryTypeLostFound = 'lf';

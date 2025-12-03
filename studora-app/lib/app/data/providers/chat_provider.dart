@@ -161,8 +161,9 @@ class ChatProvider {
 
 
       await _appwrite.functions.createExecution(
-        functionId: AppConstants.updateConversationsFunctionId,
+        functionId: AppConstants.studoraBackendFunctionId,
         body: jsonEncode({
+          'action': 'update_conversations',
           'type': 'itemUpdate',
           'itemId': itemId,
           'newTitle': newTitle,

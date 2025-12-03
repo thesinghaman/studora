@@ -265,6 +265,7 @@ class LostAndFoundProvider extends GetxService {
     const String functionName = 'getPublicFilteredLfItems';
     try {
       final Map<String, dynamic> payload = {
+        'action': 'get_public_listings',
         'listingType': lfType,
         if (collegeId != null) 'collegeId': collegeId,
         if (categoryIds != null && categoryIds.isNotEmpty)
@@ -275,14 +276,19 @@ class LostAndFoundProvider extends GetxService {
         if (endDate != null) 'endDate': endDate.toIso8601String(),
       };
       final result = await _appwriteService.functions.createExecution(
-        functionId: AppConstants.getPublicsListingsFunctionId,
+        functionId: AppConstants.studoraBackendFunctionId,
         body: jsonEncode(payload),
       );
       if (result.responseStatusCode == 200) {
-        final List<dynamic> responseData = jsonDecode(result.responseBody);
-        return responseData
-            .map((data) => appwrite_models.Document.fromMap(data))
-            .toList();
+        final Map<String, dynamic> responseBody = jsonDecode(result.responseBody);
+        if (responseBody['success'] == true) {
+          final List<dynamic> data = responseBody['data'];
+          return data
+              .map((d) => appwrite_models.Document.fromMap(d))
+              .toList();
+        } else {
+          throw Exception(responseBody['error'] ?? 'Unknown error');
+        }
       } else {
         throw Exception(
           'Failed to fetch filtered L&F items: ${result.responseBody}',

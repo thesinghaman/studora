@@ -109,19 +109,27 @@ class ItemProvider {
   }) async {
     try {
 
-      final Map<String, dynamic> payload = {'listingType': itemType};
+      final Map<String, dynamic> payload = {
+        'action': 'get_public_listings',
+        'listingType': itemType
+      };
       if (categoryId != null) {
         payload['categoryId'] = categoryId;
       }
       final result = await _appwriteService.functions.createExecution(
-        functionId: AppConstants.getPublicsListingsFunctionId,
+        functionId: AppConstants.studoraBackendFunctionId,
         body: jsonEncode(payload),
       );
       if (result.responseStatusCode == 200) {
-        final List<dynamic> responseData = jsonDecode(result.responseBody);
-        return responseData
-            .map((data) => appwrite_models.Document.fromMap(data))
-            .toList();
+        final Map<String, dynamic> responseBody = jsonDecode(result.responseBody);
+        if (responseBody['success'] == true) {
+          final List<dynamic> data = responseBody['data'];
+          return data
+              .map((d) => appwrite_models.Document.fromMap(d))
+              .toList();
+        } else {
+          throw Exception(responseBody['error'] ?? 'Unknown error');
+        }
       } else {
         throw Exception(
           'Failed to fetch filtered items: ${result.responseBody}',
@@ -150,6 +158,7 @@ class ItemProvider {
   }) async {
     try {
       final Map<String, dynamic> payload = {
+        'action': 'get_public_listings',
         'listingType': itemType,
         if (searchQuery != null && searchQuery.isNotEmpty)
           'searchQuery': searchQuery,
@@ -163,14 +172,19 @@ class ItemProvider {
         if (maxPrice != null) 'maxPrice': maxPrice,
       };
       final result = await _appwriteService.functions.createExecution(
-        functionId: AppConstants.getPublicsListingsFunctionId,
+        functionId: AppConstants.studoraBackendFunctionId,
         body: jsonEncode(payload),
       );
       if (result.responseStatusCode == 200) {
-        final List<dynamic> responseData = jsonDecode(result.responseBody);
-        return responseData
-            .map((data) => appwrite_models.Document.fromMap(data))
-            .toList();
+        final Map<String, dynamic> responseBody = jsonDecode(result.responseBody);
+        if (responseBody['success'] == true) {
+          final List<dynamic> data = responseBody['data'];
+          return data
+              .map((d) => appwrite_models.Document.fromMap(d))
+              .toList();
+        } else {
+          throw Exception(responseBody['error'] ?? 'Unknown error');
+        }
       } else {
         throw Exception(
           'Failed to search filtered items: ${result.responseBody}',

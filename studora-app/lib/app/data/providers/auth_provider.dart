@@ -391,8 +391,12 @@ class AuthProvider {
     const String methodName = 'deleteUserAccount';
     try {
       final result = await _appwriteService.functions.createExecution(
-        functionId: AppConstants.deleteUserAccountFunctionId,
-        body: jsonEncode({'userId': userId, 'password': password}),
+        functionId: AppConstants.studoraBackendFunctionId,
+        body: jsonEncode({
+          'action': 'delete_user_account',
+          'userId': userId,
+          'password': password
+        }),
         method: ExecutionMethod.pOST,
       );
       final responseBody = jsonDecode(result.responseBody);
@@ -443,8 +447,12 @@ class AuthProvider {
         "Executing function with user ID and JWT...",
       );
       final result = await _appwriteService.functions.createExecution(
-        functionId: AppConstants.deleteUnverifiedUserFunctionId,
-        body: jsonEncode({'userIdToDelete': userId, 'jwt': userJwt}),
+        functionId: AppConstants.studoraBackendFunctionId,
+        body: jsonEncode({
+          'action': 'delete_unverified_user',
+          'userIdToDelete': userId,
+          'jwt': userJwt
+        }),
         method: ExecutionMethod.pOST,
       );
 
@@ -494,8 +502,11 @@ class AuthProvider {
     const String methodName = 'fetchPublicUserProfile';
     try {
       final result = await _appwriteService.functions.createExecution(
-        functionId: AppConstants.getUserProfileFunctionId,
-        body: jsonEncode({'targetUserId': targetUserId}),
+        functionId: AppConstants.studoraBackendFunctionId,
+        body: jsonEncode({
+          'action': 'get_user_profile',
+          'targetUserId': targetUserId
+        }),
         method: ExecutionMethod.pOST,
       );
       final responseBody = jsonDecode(result.responseBody);
@@ -536,8 +547,9 @@ class AuthProvider {
   ) async {
     try {
       await _appwriteService.functions.createExecution(
-        functionId: AppConstants.updateConversationsFunctionId,
+        functionId: AppConstants.studoraBackendFunctionId,
         body: jsonEncode({
+          'action': 'update_conversations',
           'type': 'avatarUpdate',
           'userId': userId,
           'newAvatarUrl': newAvatarUrl,

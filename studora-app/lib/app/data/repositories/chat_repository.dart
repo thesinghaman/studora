@@ -100,6 +100,7 @@ class ChatRepository {
     dynamic relatedItem,
   }) async {
     final body = jsonEncode({
+      'action': 'create_message',
       'conversationId': conversationId,
       'senderId': senderId,
       'text': text,
@@ -113,7 +114,7 @@ class ChatRepository {
     });
     try {
       final execution = await _appwrite.functions.createExecution(
-        functionId: AppConstants.createMessageFunctionId,
+        functionId: AppConstants.studoraBackendFunctionId,
         body: body,
         method: ExecutionMethod.pOST,
       );
@@ -130,11 +131,12 @@ class ChatRepository {
     if (conversationId.isEmpty) return;
     try {
       final body = jsonEncode({
+        'action': 'mark_messages_as_read',
         'conversationId': conversationId,
         'userId': currentUserId,
       });
       await _appwrite.functions.createExecution(
-        functionId: AppConstants.markMessagesAsReadFunctionId,
+        functionId: AppConstants.studoraBackendFunctionId,
         body: body,
         method: ExecutionMethod.pOST,
       );
@@ -152,8 +154,9 @@ class ChatRepository {
   ) async {
     try {
       await _appwrite.functions.createExecution(
-        functionId: AppConstants.deleteConversationsFunctionId,
+        functionId: AppConstants.studoraBackendFunctionId,
         body: jsonEncode({
+          'action': 'delete_conversations',
           'conversationIds': conversationIds,
           'userId': userId,
         }),
