@@ -1,0 +1,15 @@
+{
+  "name": "messages-router",
+  "version": "1.0.0",
+  "description": "Router function for all message-related operations",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "node-appwrite": "^13.0.0"
+  },
+  "devDependencies": {},
+  "author": "",
+  "license": "ISC"
+}
