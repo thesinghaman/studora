@@ -245,5 +245,5 @@ Future<dynamic> getPublicListings(dynamic context, Client client, Map<String, dy
     return docMap;
   }).toList();
 
-  return response.success({'data': results});
+  return response.success(results);
 }

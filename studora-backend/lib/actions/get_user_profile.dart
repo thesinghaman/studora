@@ -65,7 +65,7 @@ Future<dynamic> getUserProfile(dynamic context, Client client, Map<String, dynam
       };
     }
 
-    return response.success({'data': userProfile});
+    return response.success(userProfile);
 
   } catch (e) {
     if (e is AppwriteException && e.code == 404) {
