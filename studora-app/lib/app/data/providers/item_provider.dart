@@ -124,9 +124,17 @@ class ItemProvider {
         final Map<String, dynamic> responseBody = jsonDecode(result.responseBody);
         if (responseBody['success'] == true) {
           final List<dynamic> data = responseBody['data'];
-          return data
-              .map((d) => appwrite_models.Document.fromMap(d))
-              .toList();
+          return data.map((d) {
+            return appwrite_models.Document(
+              $id: d['\$id'] ?? '',
+              $collectionId: d['\$collectionId'] ?? '',
+              $databaseId: d['\$databaseId'] ?? '',
+              $createdAt: d['\$createdAt'] ?? '',
+              $updatedAt: d['\$updatedAt'] ?? '',
+              $permissions: List<String>.from(d['\$permissions'] ?? []),
+              data: d,
+            );
+          }).toList();
         } else {
           throw Exception(responseBody['error'] ?? 'Unknown error');
         }
@@ -177,11 +185,33 @@ class ItemProvider {
       );
       if (result.responseStatusCode == 200) {
         final Map<String, dynamic> responseBody = jsonDecode(result.responseBody);
+        LoggerService.logInfo(_className, 'searchPublicFilteredItems', 'Raw response: $responseBody'); // Added log
         if (responseBody['success'] == true) {
           final List<dynamic> data = responseBody['data'];
-          return data
-              .map((d) => appwrite_models.Document.fromMap(d))
-              .toList();
+          return data.map((d) {
+            // Handle both flattened (new) and nested (old/standard) structures
+            Map<String, dynamic> docData;
+            if (d.containsKey('data') && d['data'] is Map) {
+              // Nested structure: attributes are inside 'data'
+              docData = Map<String, dynamic>.from(d['data']);
+              // Ensure we preserve top-level hydrated fields if they exist and are missing in data
+              if (d.containsKey('sellerName')) docData['sellerName'] = d['sellerName'];
+              if (d.containsKey('sellerProfilePicUrl')) docData['sellerProfilePicUrl'] = d['sellerProfilePicUrl'];
+            } else {
+              // Flattened structure: attributes are at root
+              docData = Map<String, dynamic>.from(d);
+            }
+
+            return appwrite_models.Document(
+              $id: d['\$id'] ?? '',
+              $collectionId: d['\$collectionId'] ?? '',
+              $databaseId: d['\$databaseId'] ?? '',
+              $createdAt: d['\$createdAt'] ?? '',
+              $updatedAt: d['\$updatedAt'] ?? '',
+              $permissions: List<String>.from(d['\$permissions'] ?? []),
+              data: docData,
+            );
+          }).toList();
         } else {
           throw Exception(responseBody['error'] ?? 'Unknown error');
         }

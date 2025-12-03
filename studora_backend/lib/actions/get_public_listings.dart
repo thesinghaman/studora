@@ -157,68 +157,101 @@ Future<dynamic> getPublicListings(dynamic context, Client client, Map<String, dy
     documents = response.documents;
   }
 
-  if (requestingUserId == null) {
-    // Return raw documents (converted to map)
-    return context.res.json({
-      'success': true,
-      'data': documents.map((d) => d.data).toList()
-    });
+  var filteredDocs = documents;
+  final authorField = collectionId == Platform.environment['APPWRITE_ITEMS_COLLECTION_ID']
+      ? 'sellerId'
+      : 'reporterId';
+
+  // 1. Filtering (Blocked Users) - Only if user is logged in
+  if (requestingUserId != null) {
+    try {
+      // Fetch requesting user to see who THEY blocked
+      final userDoc = await databases.getDocument(
+        databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
+        collectionId: Platform.environment['APPWRITE_USERS_COLLECTION_ID']!,
+        documentId: requestingUserId,
+      );
+
+      final iHaveBlockedThem = List<String>.from(userDoc.data['blockedUsers'] ?? []);
+      
+      // Filter out docs from users I blocked
+      filteredDocs = documents.where((doc) => !iHaveBlockedThem.contains(doc.data[authorField])).toList();
+
+    } catch (e) {
+      context.error('Error fetching requesting user profile: $e');
+      // Continue with unfiltered docs or fail? Let's continue but log error.
+    }
   }
 
-  try {
-    final authorField = collectionId == Platform.environment['APPWRITE_ITEMS_COLLECTION_ID']
-        ? 'sellerId'
-        : 'reporterId';
-    
-    // Fetch requesting user to see who THEY blocked
-    final userDoc = await databases.getDocument(
-      databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-      collectionId: Platform.environment['APPWRITE_USERS_COLLECTION_ID']!,
-      documentId: requestingUserId,
-    );
+  // 2. Fetch Author Profiles (for Hydration AND "Blocked Me" check)
+  final authorIds = filteredDocs
+      .map((doc) => doc.data[authorField] as String?)
+      .where((id) => id != null)
+      .cast<String>()
+      .toSet()
+      .toList();
 
-    final iHaveBlockedThem = List<String>.from(userDoc.data['blockedUsers'] ?? []);
-    
-    // Filter out docs from users I blocked
-    var filteredDocs = documents.where((doc) => !iHaveBlockedThem.contains(doc.data[authorField])).toList();
+  Map<String, Document> authorMap = {};
 
-    // Check if authors blocked ME
-    final authorIds = filteredDocs.map((doc) => doc.data[authorField] as String).toSet().toList();
-
-    if (authorIds.isNotEmpty) {
-      // Fetch author profiles to check their blocked list
-      // Note: listDocuments has a limit on query length. If authorIds is huge, this might fail.
-      // Assuming limit=15, it's fine.
+  if (authorIds.isNotEmpty) {
+    try {
+      // Chunk the IDs if necessary (Appwrite limit is usually around 100, but query length matters)
+      // For safety, we can fetch in batches or just assume limit=15 is small enough.
       final authorProfiles = await databases.listDocuments(
         databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
         collectionId: Platform.environment['APPWRITE_USERS_COLLECTION_ID']!,
         queries: [Query.equal('\$id', authorIds), Query.limit(authorIds.length)],
       );
 
-      final theyHaveBlockedMe = <String>{};
       for (final profile in authorProfiles.documents) {
-        final blocked = List<String>.from(profile.data['blockedUsers'] ?? []);
-        if (blocked.contains(requestingUserId)) {
-          theyHaveBlockedMe.add(profile.$id);
-        }
+        authorMap[profile.$id] = profile;
       }
+    } catch (e) {
+      context.error('Error fetching author profiles: $e');
+    }
+  }
 
-      if (theyHaveBlockedMe.isNotEmpty) {
-        filteredDocs = filteredDocs.where((doc) => !theyHaveBlockedMe.contains(doc.data[authorField])).toList();
+  // 3. "Blocked Me" Check - Only if user is logged in
+  if (requestingUserId != null) {
+    final theyHaveBlockedMe = <String>{};
+    for (final profile in authorMap.values) {
+      final blocked = List<String>.from(profile.data['blockedUsers'] ?? []);
+      if (blocked.contains(requestingUserId)) {
+        theyHaveBlockedMe.add(profile.$id);
       }
     }
 
-    // Return filtered docs
-    return context.res.json({
-      'success': true,
-      'data': filteredDocs.map((d) => d.toMap()).toList()
-    });
-
-  } catch (e) {
-    context.error('Failed filtering for user $requestingUserId: $e');
-    return context.res.json({
-      'success': false,
-      'error': e.toString()
-    }, 500);
+    if (theyHaveBlockedMe.isNotEmpty) {
+      filteredDocs = filteredDocs.where((doc) => !theyHaveBlockedMe.contains(doc.data[authorField])).toList();
+    }
   }
+
+  // 4. Hydration & Response Construction
+  final results = filteredDocs.map((doc) {
+    // Explicitly flatten the document to ensure attributes are at the top level
+    final Map<String, dynamic> docMap = Map<String, dynamic>.from(doc.data);
+    docMap['\$id'] = doc.$id;
+    docMap['\$collectionId'] = doc.$collectionId;
+    docMap['\$databaseId'] = doc.$databaseId;
+    docMap['\$createdAt'] = doc.$createdAt;
+    docMap['\$updatedAt'] = doc.$updatedAt;
+    docMap['\$permissions'] = doc.$permissions;
+
+    final authorId = doc.data[authorField] as String?;
+    
+    if (authorId != null && authorMap.containsKey(authorId)) {
+      final authorProfile = authorMap[authorId]!;
+      // Inject fields expected by frontend ItemModel
+      docMap['sellerName'] = authorProfile.data['name'] ?? 'Unknown Seller';
+      docMap['sellerProfilePicUrl'] = authorProfile.data['profilePicUrl'];
+    } else {
+      docMap['sellerName'] = 'Unknown Seller';
+    }
+    return docMap;
+  }).toList();
+
+  return context.res.json({
+    'success': true,
+    'data': results
+  });
 }

@@ -132,6 +132,7 @@ class ItemRepository {
       final marketplaceDocs = await _itemProvider.getPublicFilteredItems(
         'marketplace',
       );
+
       _marketplaceItems.assignAll(
         marketplaceDocs
             .map((doc) => ItemModel.fromJson(doc.data, doc.$id))
