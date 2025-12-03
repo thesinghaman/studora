@@ -159,7 +159,10 @@ Future<dynamic> getPublicListings(dynamic context, Client client, Map<String, dy
 
   if (requestingUserId == null) {
     // Return raw documents (converted to map)
-    return context.res.json(documents.map((d) => d.data).toList());
+    return context.res.json({
+      'success': true,
+      'data': documents.map((d) => d.data).toList()
+    });
   }
 
   try {
@@ -206,14 +209,16 @@ Future<dynamic> getPublicListings(dynamic context, Client client, Map<String, dy
     }
 
     // Return filtered docs
-    // Note: We should return the full document structure or just data? 
-    // The JS code returned `filteredDocs` which were Document objects.
-    // `res.json` in JS handles objects. In Dart `res.json` expects Map/List.
-    // Document object has toMap().
-    return context.res.json(filteredDocs.map((d) => d.toMap()).toList());
+    return context.res.json({
+      'success': true,
+      'data': filteredDocs.map((d) => d.toMap()).toList()
+    });
 
   } catch (e) {
     context.error('Failed filtering for user $requestingUserId: $e');
-    return context.res.json([], 500);
+    return context.res.json({
+      'success': false,
+      'error': e.toString()
+    }, 500);
   }
 }
