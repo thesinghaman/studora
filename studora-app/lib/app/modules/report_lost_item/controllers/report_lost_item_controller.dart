@@ -140,21 +140,34 @@ class ReportLostItemController extends GetxController {
   }
 
   Future<void> requestPermissionAndPickImage(ImageSource source) async {
+    // On iOS, the gallery (PHPicker) does not require explicit permission.
+    if (Platform.isIOS && source == ImageSource.gallery) {
+      _pickImage(source);
+      return;
+    }
+
     PermissionStatus status;
-    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-    AndroidDeviceInfo? androidInfo;
-    if (Platform.isAndroid) {
-      androidInfo = await deviceInfo.androidInfo;
-    }
-    if (Platform.isIOS ||
-        (Platform.isAndroid && (androidInfo?.version.sdkInt ?? 0) >= 33)) {
-      status = await Permission.photos.request();
-    } else if (Platform.isAndroid && (androidInfo?.version.sdkInt ?? 0) < 33) {
-      status = await Permission.storage.request();
+
+    if (source == ImageSource.camera) {
+      status = await Permission.camera.request();
     } else {
-      status = await Permission.photos.request();
+      DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+      AndroidDeviceInfo? androidInfo;
+      if (Platform.isAndroid) {
+        androidInfo = await deviceInfo.androidInfo;
+      }
+      if (Platform.isIOS ||
+          (Platform.isAndroid && (androidInfo?.version.sdkInt ?? 0) >= 33)) {
+        status = await Permission.photos.request();
+      } else if (Platform.isAndroid &&
+          (androidInfo?.version.sdkInt ?? 0) < 33) {
+        status = await Permission.storage.request();
+      } else {
+        status = await Permission.photos.request();
+      }
     }
-    if (status.isGranted) {
+
+    if (status.isGranted || status.isLimited) {
       _pickImage(source);
     } else if (status.isPermanentlyDenied) {
       SnackbarService.showError(

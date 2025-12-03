@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
@@ -116,6 +120,40 @@ class EditProfileController extends GetxController {
   }
 
   Future<void> pickAndCropImage(ImageSource source) async {
+    // On iOS, the gallery (PHPicker) does not require explicit permission.
+    if (Platform.isIOS && source == ImageSource.gallery) {
+      await _proceedToPickAndCrop(source);
+      return;
+    }
+
+    Permission permission;
+    if (source == ImageSource.camera) {
+      permission = Permission.camera;
+    } else {
+      if (Platform.isAndroid) {
+        final androidInfo = await DeviceInfoPlugin().androidInfo;
+        permission = androidInfo.version.sdkInt >= 33
+            ? Permission.photos
+            : Permission.storage;
+      } else {
+        permission = Permission.photos;
+      }
+    }
+
+    PermissionStatus status = await permission.request();
+    if (status.isGranted || status.isLimited) {
+      await _proceedToPickAndCrop(source);
+    } else if (status.isPermanentlyDenied) {
+      SnackbarService.showError(
+        'Permission permanently denied. Please enable it from app settings.',
+      );
+      await openAppSettings();
+    } else {
+      SnackbarService.showError('Permission denied. Cannot pick images.');
+    }
+  }
+
+  Future<void> _proceedToPickAndCrop(ImageSource source) async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: source,

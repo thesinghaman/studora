@@ -172,6 +172,12 @@ class PostAdController extends GetxController {
   }
 
   Future<void> _pickFromSourceAndNavigateToPreview(ImageSource source) async {
+    // On iOS, the gallery (PHPicker) does not require explicit permission.
+    if (Platform.isIOS && source == ImageSource.gallery) {
+      await _proceedToPickImages(source);
+      return;
+    }
+
     Permission permission;
     if (source == ImageSource.camera) {
       permission = Permission.camera;
@@ -193,47 +199,37 @@ class PostAdController extends GetxController {
       );
       return;
     }
+    await _proceedToPickImages(source);
+  }
+
+  Future<void> _proceedToPickImages(ImageSource source) async {
     List<XFile> pickedFiles = [];
     int currentImageCount = selectedImages.length;
     int limit = 5 - currentImageCount;
     if (limit <= 0 && source == ImageSource.gallery) {
       SnackbarService.showWarning(
         title: "Image Limit",
-        "You have already selected 5 images.",
+        "Maximum 5 images already selected.",
       );
-      await _navigateToPreviewScreen(List<XFile>.from(selectedImages), 0);
+      if (selectedImages.isNotEmpty) {
+        await _navigateToPreviewScreen(List<XFile>.from(selectedImages), 0);
+      }
       return;
     }
     if (source == ImageSource.gallery) {
-      if (limit > 0) {
-        pickedFiles = await _picker.pickMultiImage(
-          imageQuality: 70,
-          limit: limit,
-        );
-      }
+      pickedFiles = await _picker.pickMultiImage(imageQuality: 70);
     } else {
-      if (limit > 0) {
-        final XFile? pickedFile = await _picker.pickImage(
-          source: source,
-          imageQuality: 70,
-        );
-        if (pickedFile != null) {
-          pickedFiles.add(pickedFile);
-        }
-      } else {
-        SnackbarService.showWarning(
-          title: "Image Limit",
-          "You have already selected 5 images.",
-        );
-        await _navigateToPreviewScreen(List<XFile>.from(selectedImages), 0);
-        return;
-      }
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        imageQuality: 70,
+      );
+      if (pickedFile != null) pickedFiles.add(pickedFile);
     }
     if (pickedFiles.isNotEmpty) {
       await _navigateToPreviewScreen([
         ...selectedImages,
         ...pickedFiles,
-      ], currentImageCount);
+      ], selectedImages.length);
     } else if (selectedImages.isNotEmpty &&
         (source == ImageSource.gallery || source == ImageSource.camera)) {
       await _navigateToPreviewScreen(List<XFile>.from(selectedImages), 0);

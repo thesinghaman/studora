@@ -47,5 +47,11 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>We need access to your photo library to allow you to upload photos for your listings.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>We need access to your camera to allow you to take photos for your listings.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>We need access to your microphone for video recording.</string>
 	</dict>
 </plist>
