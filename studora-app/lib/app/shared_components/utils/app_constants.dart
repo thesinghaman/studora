@@ -28,25 +28,6 @@ class AppConstants {
   static String supportTicketsCollectionId =
       dotenv.env['SUPPORT_TICKETS_COLLECTION_ID'] ?? '';
 
-  static String updateConversationsFunctionId =
-      dotenv.env['UPDATE_CONVERSATIONS_FUNCTION_ID'] ?? '';
-  static String createMessageFunctionId =
-      dotenv.env['CREATE_MESSAGE_FUNCTION_ID'] ?? '';
-  static String getUserProfileFunctionId =
-      dotenv.env['GET_USER_PROFILE_FUNCTION_ID'] ?? '';
-  static String deleteUserAccountFunctionId =
-      dotenv.env['DELETE_USER_ACCOUNT_FUNCTION_ID'] ?? '';
-  static String notifyOnNewMessageFunctionId =
-      dotenv.env['NOTIFY_ON_NEW_MESSAGE_FUNCTION_ID'] ?? '';
-  static String markMessagesAsReadFunctionId =
-      dotenv.env['MARK_MESSAGES_AS_READ_FUNCTION_ID'] ?? '';
-  static String deleteUnverifiedUserFunctionId =
-      dotenv.env['DELETE_UNVERIFIED_USER_FUNCTION_ID'] ?? '';
-  static String deleteConversationsFunctionId =
-      dotenv.env['DELETE_CONVERSATIONS_FUNCTION_ID'] ?? '';
-  static String getPublicsListingsFunctionId =
-      dotenv.env['GET_PUBLIC_LISTINGS_FUNCTION_ID'] ?? '';
-
   static String studoraBackendFunctionId =
       dotenv.env['STUDORA_BACKEND_FUNCTION_ID'] ?? '';
 

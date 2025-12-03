@@ -238,3 +238,4 @@ studora-web/public/APKs/*.aab
 **/test/reports/
 **/screenshots/
 
+.gitmessage

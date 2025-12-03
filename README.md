@@ -97,7 +97,7 @@
 - **Database**: NoSQL Collections
 - **Storage**: Cloud Storage for images
 - **Realtime**: WebSocket subscriptions
-- **Functions**: Node.js serverless functions
+- **Functions**: Dart serverless functions (Single Monolithic Function)
 
 ### Push Notifications
 
@@ -393,55 +393,44 @@ This will create `lib/firebase_options.dart` with your Firebase configuration.
 
 ### 3. Appwrite Functions Deployment
 
-Appwrite Functions can be deployed directly from GitHub repositories, eliminating the need for CLI deployment.
+The backend logic is consolidated into a single Dart function (`studora_backend`) for easier maintenance and deployment.
 
-#### Step 1: Prepare Function Repositories
+#### Step 1: Push Backend to GitHub
 
-You have two options:
-
-**Option A: Individual Repositories**
-
-- Create separate GitHub repositories for each function
-- Example: `studora-function-createMessage`, `studora-function-notifyOnNewMessage`, etc.
-
-**Option B: Monorepo with Subdirectories**
-
-- Use the existing `appwrite-functions/` directory structure
-- Each function folder will be linked separately
-
-#### Step 2: Push Functions to GitHub
-
-If using the monorepo approach:
+Ensure your `studora_backend` directory is committed and pushed to your GitHub repository.
 
 ```bash
-# Ensure your functions are committed
-git add appwrite-functions/
-git commit -m "Add Appwrite Functions"
+git add studora_backend/
+git commit -m "Add Dart Backend"
 git push origin main
 ```
 
-#### Step 3: Connect Functions in Appwrite Console
-
-For **each function**, follow these steps:
+#### Step 2: Connect Function in Appwrite Console
 
 1. Go to **Appwrite Console** → **Functions** → **Create Function**
 2. Click **Connect Git Repository**
 3. Authorize GitHub if not already connected
 4. Select your repository (e.g., `studora`)
-5. **Production Branch**: `main` (or your preferred branch)
-6. **Root Directory**: Enter the function path
-   - For `createMessage`: `appwrite-functions/createMessage`
-   - For `notifyOnNewMessage`: `appwrite-functions/notifyOnNewMessage`
-   - For `updateConversations`: `appwrite-functions/updateConversations`
-   - Repeat for all 9 functions
-7. **Runtime**: Select `Node.js 18.0` or higher
-8. **Entrypoint**: `src/main.js`
+5. **Production Branch**: `main`
+6. **Root Directory**: `studora_backend`
+7. **Runtime**: Select `Dart 3.0` (or latest available)
+8. **Entrypoint**: `lib/main.dart`
 9. **Build Settings**:
-   - Build Command: `npm install`
-   - Leave other settings as default
+   - Build Command: `dart pub get`
 10. Click **Connect**
 
 Appwrite will automatically deploy the function from GitHub. Any future commits to the connected branch will trigger automatic redeployment.
+
+#### Step 3: Configure Environment Variables
+
+In the Appwrite Console for your function, go to **Settings** → **Environment Variables** and add:
+
+- `APPWRITE_DATABASE_ID`: Your Database ID
+- `APPWRITE_USERS_COLLECTION_ID`: Users Collection ID
+- `APPWRITE_ITEMS_COLLECTION_ID`: Items Collection ID
+- `APPWRITE_CHATS_COLLECTION_ID`: Chats Collection ID
+- `APPWRITE_MESSAGES_COLLECTION_ID`: Messages Collection ID
+- ... (Add other collection IDs as needed)
 
 #### Step 4: Configure Push Notifications
 
@@ -454,20 +443,12 @@ To enable Firebase Cloud Messaging in Appwrite:
    - This file is required for Appwrite to send push notifications
 4. Click **Create**
 
-#### Step 5: Update Function IDs in App
+#### Step 5: Update Function ID in App
 
-After deployment, copy each function ID from Appwrite Console and update `app_constants.dart`:
+After deployment, copy the function ID from Appwrite Console and update `app_constants.dart`:
 
 ```dart
-static const String createMessageFunctionId = 'FUNCTION_ID_HERE';
-static const String updateConversationsFunctionId = 'FUNCTION_ID_HERE';
-static const String notifyOnNewMessageFunctionId = 'FUNCTION_ID_HERE';
-static const String markMessagesAsReadFunctionId = 'FUNCTION_ID_HERE';
-static const String getUserProfileFunctionId = 'FUNCTION_ID_HERE';
-static const String deleteUserAccountFunctionId = 'FUNCTION_ID_HERE';
-static const String deleteUnverifiedUserFunctionId = 'FUNCTION_ID_HERE';
-static const String deleteConversationsFunctionId = 'FUNCTION_ID_HERE';
-static const String getPublicsListingsFunctionId = 'FUNCTION_ID_HERE';
+static const String studoraBackendFunctionId = 'FUNCTION_ID_HERE';
 ```
 
 ---
@@ -506,16 +487,15 @@ studora/
 │   ├── ios/                       # iOS native code
 │   └── pubspec.yaml              # Flutter dependencies
 │
-├── appwrite-functions/            # Serverless backend functions
-│   ├── createMessage/            # Message creation logic
-│   ├── updateConversations/      # Conversation updates
-│   ├── notifyOnNewMessage/       # FCM notifications
-│   ├── markMessagesAsRead/       # Read receipts
-│   ├── getUserProfile/           # User data retrieval
-│   ├── deleteUserAccount/        # Account deletion
-│   ├── deleteUnverifiedUser/     # Cleanup unverified users
-│   ├── deleteConversations/      # Conversation management
-│   └── getPublicListings/        # Public item listings
+├── studora_backend/               # Dart serverless backend
+│   ├── lib/
+│   │   ├── actions/              # Individual business logic actions
+│   │   │   ├── create_message.dart
+│   │   │   ├── get_public_listings.dart
+│   │   │   └── ...
+│   │   ├── utils/                # Backend utilities
+│   │   └── main.dart             # Main entry point (Router)
+│   └── pubspec.yaml              # Backend dependencies
 │
 └── README.md                      # This file
 ```
