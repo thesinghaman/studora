@@ -387,14 +387,14 @@ This will create `lib/firebase_options.dart` with your Firebase configuration.
 
 ### 3. Appwrite Functions Deployment
 
-The backend logic is consolidated into a single Dart function (`studora_backend`) for easier maintenance and deployment.
+The backend logic is consolidated into a single Dart function (`studora-backend`) for easier maintenance and deployment.
 
 #### Step 1: Push Backend to GitHub
 
-Ensure your `studora_backend` directory is committed and pushed to your GitHub repository.
+Ensure your `studora-backend` directory is committed and pushed to your GitHub repository.
 
 ```bash
-git add studora_backend/
+git add studora-backend/
 git commit -m "Add Dart Backend"
 git push origin main
 ```
@@ -406,7 +406,7 @@ git push origin main
 3. Authorize GitHub if not already connected
 4. Select your repository (e.g., `studora`)
 5. **Production Branch**: `main`
-6. **Root Directory**: `studora_backend`
+6. **Root Directory**: `studora-backend`
 7. **Runtime**: Select `Dart 3.0` (or latest available)
 8. **Entrypoint**: `lib/main.dart`
 9. **Build Settings**:
@@ -481,7 +481,7 @@ studora/
 │   ├── ios/                       # iOS native code
 │   └── pubspec.yaml              # Flutter dependencies
 │
-├── studora_backend/               # Dart serverless backend
+├── studora-backend/               # Dart serverless backend
 │   ├── lib/
 │   │   ├── actions/              # Individual business logic actions
 │   │   │   ├── create_message.dart
