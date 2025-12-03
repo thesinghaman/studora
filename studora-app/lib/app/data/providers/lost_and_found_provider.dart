@@ -287,7 +287,7 @@ class LostAndFoundProvider extends GetxService {
               .map((d) => appwrite_models.Document.fromMap(d))
               .toList();
         } else {
-          throw Exception(responseBody['error'] ?? 'Unknown error');
+          throw Exception(responseBody['error']?['message'] ?? responseBody['message'] ?? 'Unknown error');
         }
       } else {
         throw Exception(

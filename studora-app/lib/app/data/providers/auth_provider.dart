@@ -409,7 +409,7 @@ class AuthProvider {
         return;
       } else {
         final errorMessage =
-            responseBody['message'] ?? 'An unknown error occurred.';
+            responseBody['error']?['message'] ?? responseBody['message'] ?? 'An unknown error occurred.';
         LoggerService.logError(
           className,
           methodName,
@@ -476,7 +476,7 @@ class AuthProvider {
           return;
         } else {
           final errorMessage =
-              responseBody['message'] ?? 'Backend failed to delete account.';
+              responseBody['error']?['message'] ?? responseBody['message'] ?? 'Backend failed to delete account.';
           throw Exception(errorMessage);
         }
       } else {
@@ -519,7 +519,7 @@ class AuthProvider {
         return responseBody['data'] as Map<String, dynamic>;
       } else {
         final errorMessage =
-            responseBody['message'] ?? 'An unknown error occurred.';
+            responseBody['error']?['message'] ?? responseBody['message'] ?? 'An unknown error occurred.';
         throw Exception(errorMessage);
       }
     } on AppwriteException catch (e) {
@@ -605,9 +605,10 @@ class AuthProvider {
       final response = jsonDecode(execution.responseBody);
       LoggerService.logInfo(className, methodName, "Response: $response");
       if (execution.responseStatusCode == 200 && response['success'] == true) {
-        return response['userId'];
+        return response['data']['userId'];
       } else {
-        throw response['message'] ?? 'Failed to initiate password reset';
+        final errorMessage = response['error']?['message'] ?? response['message'] ?? 'Failed to initiate password reset';
+        throw errorMessage;
       }
     } catch (e) {
       LoggerService.logError(className, methodName, "Error: $e");
@@ -634,7 +635,8 @@ class AuthProvider {
 
       final response = jsonDecode(execution.responseBody);
       if (execution.responseStatusCode != 200 || response['success'] != true) {
-        throw response['message'] ?? 'Failed to reset password';
+        final errorMessage = response['error']?['message'] ?? response['message'] ?? 'Failed to reset password';
+        throw errorMessage;
       }
     } catch (e) {
       LoggerService.logError(className, methodName, "Error: $e");

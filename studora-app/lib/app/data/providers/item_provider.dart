@@ -136,7 +136,7 @@ class ItemProvider {
             );
           }).toList();
         } else {
-          throw Exception(responseBody['error'] ?? 'Unknown error');
+          throw Exception(responseBody['error']?['message'] ?? responseBody['message'] ?? 'Unknown error');
         }
       } else {
         throw Exception(
@@ -213,7 +213,7 @@ class ItemProvider {
             );
           }).toList();
         } else {
-          throw Exception(responseBody['error'] ?? 'Unknown error');
+          throw Exception(responseBody['error']?['message'] ?? responseBody['message'] ?? 'Unknown error');
         }
       } else {
         throw Exception(
