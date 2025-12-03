@@ -8,7 +8,7 @@
 PRODUCT_NAME = studora
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.swiftminds.studora.studora
+PRODUCT_BUNDLE_IDENTIFIER = com.swiftminds.studora
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2025 com.swiftminds.studora. All rights reserved.

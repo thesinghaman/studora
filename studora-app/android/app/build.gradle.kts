@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.swiftminds.studora.studora"
+    namespace = "com.swiftminds.studora"
     compileSdk = flutter.compileSdkVersion
 
     ndkVersion = "27.0.12077973"
@@ -22,7 +22,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.swiftminds.studora.studora"
+        applicationId = "com.swiftminds.studora"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
