@@ -242,8 +242,9 @@ Future<dynamic> getPublicListings(dynamic context, Client client, Map<String, dy
     if (authorId != null && authorMap.containsKey(authorId)) {
       final authorProfile = authorMap[authorId]!;
       // Inject fields expected by frontend ItemModel
-      docMap['sellerName'] = authorProfile.data['name'] ?? 'Unknown Seller';
-      docMap['sellerProfilePicUrl'] = authorProfile.data['profilePicUrl'];
+      // Check for 'userName' first (as seen in getUserProfile), then 'name'
+      docMap['sellerName'] = authorProfile.data['userName'] ?? authorProfile.data['name'] ?? 'Unknown Seller';
+      docMap['sellerProfilePicUrl'] = authorProfile.data['userAvatarUrl'] ?? authorProfile.data['profilePicUrl'];
     } else {
       docMap['sellerName'] = 'Unknown Seller';
     }
