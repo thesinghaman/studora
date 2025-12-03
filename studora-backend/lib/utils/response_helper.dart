@@ -24,6 +24,6 @@ class ResponseHelper {
         'code': code ?? 'UNKNOWN_ERROR',
         'details': details,
       }
-    }, statusCode: statusCode);
+    }, statusCode);
   }
 }

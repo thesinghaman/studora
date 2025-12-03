@@ -629,7 +629,7 @@ class AuthProvider {
           'action': 'complete_password_reset',
           'userId': userId,
           'secret': secret,
-          'password': newPassword,
+          'newPassword': newPassword,
           'confirmPassword': newPassword,
         }),
       );
