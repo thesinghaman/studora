@@ -1,11 +1,14 @@
 import 'dart:io';
+
 import 'package:dart_appwrite/dart_appwrite.dart';
+
 import '../utils/logger.dart';
 import '../utils/response_helper.dart';
 import '../dtos/user_dtos.dart';
 import '../utils/exceptions.dart';
 
-Future<dynamic> getUserProfile(dynamic context, Client client, Map<String, dynamic> data) async {
+Future<dynamic> getUserProfile(
+    dynamic context, Client client, Map<String, dynamic> data) async {
   final logger = Logger(context);
   final response = ResponseHelper(context);
   final databases = Databases(client);
@@ -28,13 +31,15 @@ Future<dynamic> getUserProfile(dynamic context, Client client, Map<String, dynam
       documentId: request.targetUserId,
     );
 
-    final blockedUsers = List<String>.from(targetUserDoc.data['blockedUsers'] ?? []);
+    final blockedUsers =
+        List<String>.from(targetUserDoc.data['blockedUsers'] ?? []);
     final isRequesterBlocked = blockedUsers.contains(requestingUserId);
 
     Map<String, dynamic> userProfile;
 
     if (isRequesterBlocked) {
-      logger.info('Request from blocked user $requestingUserId to ${request.targetUserId}.');
+      logger.info(
+          'Request from blocked user $requestingUserId to ${request.targetUserId}.');
       userProfile = {
         'userId': targetUserDoc.$id,
         'userName': targetUserDoc.data['userName'],
@@ -48,7 +53,8 @@ Future<dynamic> getUserProfile(dynamic context, Client client, Map<String, dynam
         'isBlocked': true,
       };
     } else {
-      logger.info('Request from user $requestingUserId to ${request.targetUserId}.');
+      logger.info(
+          'Request from user $requestingUserId to ${request.targetUserId}.');
       final showLastSeen = targetUserDoc.data['showLastSeen'] ?? false;
       userProfile = {
         'userId': targetUserDoc.$id,
@@ -59,14 +65,14 @@ Future<dynamic> getUserProfile(dynamic context, Client client, Map<String, dynam
         'hostel': targetUserDoc.data['hostel'],
         'dateJoined': targetUserDoc.data['dateJoined'],
         'isBlocked': false,
-        'isOnline': showLastSeen ? (targetUserDoc.data['isOnline'] ?? false) : false,
+        'isOnline':
+            showLastSeen ? (targetUserDoc.data['isOnline'] ?? false) : false,
         'lastSeen': showLastSeen ? targetUserDoc.data['lastSeen'] : null,
         'showReadReceipts': targetUserDoc.data['showReadReceipts'],
       };
     }
 
     return response.success(userProfile);
-
   } catch (e) {
     if (e is AppwriteException && e.code == 404) {
       throw NotFoundError('User not found.');

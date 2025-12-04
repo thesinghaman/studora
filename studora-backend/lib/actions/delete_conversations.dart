@@ -1,13 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:dart_appwrite/dart_appwrite.dart';
 import 'package:dart_appwrite/models.dart';
+
 import '../utils/logger.dart';
 import '../utils/response_helper.dart';
 import '../dtos/chat_dtos.dart';
 import '../utils/exceptions.dart';
 
-Future<dynamic> deleteConversations(dynamic context, Client client, Map<String, dynamic> data) async {
+Future<dynamic> deleteConversations(
+    dynamic context, Client client, Map<String, dynamic> data) async {
   final logger = Logger(context);
   final response = ResponseHelper(context);
   final databases = Databases(client);
@@ -20,27 +23,36 @@ Future<dynamic> deleteConversations(dynamic context, Client client, Map<String, 
   final headers = context.req.headers as Map<String, dynamic>;
   final requestingUserId = headers['x-appwrite-user-id'];
   if (requestingUserId != null && requestingUserId != request.userId) {
-    throw UnauthorizedError('User ID mismatch. You cannot delete conversations for another user.');
+    throw UnauthorizedError(
+        'User ID mismatch. You cannot delete conversations for another user.');
   }
 
-  final chatImagesBucketId = Platform.environment['APPWRITE_CHAT_STORAGE_BUCKET_ID'];
+  final chatImagesBucketId =
+      Platform.environment['APPWRITE_CHAT_STORAGE_BUCKET_ID'];
   if (chatImagesBucketId == null) {
-    throw AppError(message: 'Environment variable APPWRITE_CHAT_STORAGE_BUCKET_ID is not set.');
+    throw AppError(
+        message:
+            'Environment variable APPWRITE_CHAT_STORAGE_BUCKET_ID is not set.');
   }
 
   for (final convoId in request.conversationIds) {
     try {
       final conversation = await databases.getDocument(
         databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-        collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+        collectionId:
+            Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
         documentId: convoId,
       );
 
-      List<String> deletedBy = List<String>.from(conversation.data['deletedBy'] ?? []);
-      List<String> visibleTo = List<String>.from(conversation.data['visibleTo'] ?? []);
-      List<String> participants = List<String>.from(conversation.data['participants'] ?? []);
+      List<String> deletedBy =
+          List<String>.from(conversation.data['deletedBy'] ?? []);
+      List<String> visibleTo =
+          List<String>.from(conversation.data['visibleTo'] ?? []);
+      List<String> participants =
+          List<String>.from(conversation.data['participants'] ?? []);
 
-      final otherParticipants = participants.where((p) => p != request.userId).toList();
+      final otherParticipants =
+          participants.where((p) => p != request.userId).toList();
 
       // Reset unread count
       Map<String, dynamic> unreadCounts = {};
@@ -49,7 +61,8 @@ Future<dynamic> deleteConversations(dynamic context, Client client, Map<String, 
       } catch (_) {}
 
       if (unreadCounts.containsKey(request.userId)) {
-        logger.info('Resetting unread count for user ${request.userId} in convo $convoId');
+        logger.info(
+            'Resetting unread count for user ${request.userId} in convo $convoId');
         unreadCounts[request.userId] = 0;
       }
 
@@ -90,7 +103,8 @@ Future<dynamic> deleteConversations(dynamic context, Client client, Map<String, 
         } catch (_) {}
       }
 
-      final isFinalDelete = otherParticipants.every((p) => deletedUserIds.contains(p));
+      final isFinalDelete =
+          otherParticipants.every((p) => deletedUserIds.contains(p));
 
       if (isFinalDelete) {
         logger.info('Performing final delete for conversation $convoId...');
@@ -107,7 +121,8 @@ Future<dynamic> deleteConversations(dynamic context, Client client, Map<String, 
 
           final res = await databases.listDocuments(
             databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-            collectionId: Platform.environment['APPWRITE_MESSAGES_COLLECTION_ID']!,
+            collectionId:
+                Platform.environment['APPWRITE_MESSAGES_COLLECTION_ID']!,
             queries: queries,
           );
           messages.addAll(res.documents);
@@ -132,14 +147,16 @@ Future<dynamic> deleteConversations(dynamic context, Client client, Map<String, 
           }
           await databases.deleteDocument(
             databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-            collectionId: Platform.environment['APPWRITE_MESSAGES_COLLECTION_ID']!,
+            collectionId:
+                Platform.environment['APPWRITE_MESSAGES_COLLECTION_ID']!,
             documentId: message.$id,
           );
         }
 
         await databases.deleteDocument(
           databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-          collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+          collectionId:
+              Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
           documentId: convoId,
         );
         logger.info('Permanently deleted conversation $convoId');
@@ -155,7 +172,8 @@ Future<dynamic> deleteConversations(dynamic context, Client client, Map<String, 
 
         await databases.updateDocument(
           databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-          collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+          collectionId:
+              Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
           documentId: convoId,
           data: {
             'deletedBy': deletedBy,
@@ -164,7 +182,8 @@ Future<dynamic> deleteConversations(dynamic context, Client client, Map<String, 
           },
           permissions: newPermissions.toSet().toList(),
         );
-        logger.info('Soft-deleted conversation $convoId for user ${request.userId}');
+        logger.info(
+            'Soft-deleted conversation $convoId for user ${request.userId}');
       }
     } catch (e) {
       logger.error('Failed to process deletion for conversation $convoId', e);

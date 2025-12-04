@@ -1,5 +1,6 @@
 import '../utils/validator.dart';
 import '../utils/exceptions.dart';
+
 import 'auth_dtos.dart';
 
 class DeleteUnverifiedUserRequest extends RequestDto {
@@ -15,7 +16,8 @@ class DeleteUnverifiedUserRequest extends RequestDto {
     final userIdToDelete = map['userIdToDelete'];
     final jwt = map['jwt'];
 
-    final userIdError = Validator.validateRequired(userIdToDelete, 'User ID to delete');
+    final userIdError =
+        Validator.validateRequired(userIdToDelete, 'User ID to delete');
     if (userIdError != null) throw ValidationError(userIdError);
 
     final jwtError = Validator.validateRequired(jwt, 'JWT');

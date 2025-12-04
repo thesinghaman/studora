@@ -1,13 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:dart_appwrite/dart_appwrite.dart';
 import 'package:dart_appwrite/models.dart';
+
 import '../utils/logger.dart';
 import '../utils/response_helper.dart';
 import '../dtos/chat_dtos.dart';
 import '../utils/exceptions.dart';
 
-Future<dynamic> updateConversations(dynamic context, Client client, Map<String, dynamic> data) async {
+Future<dynamic> updateConversations(
+    dynamic context, Client client, Map<String, dynamic> data) async {
   final logger = Logger(context);
   final response = ResponseHelper(context);
   final databases = Databases(client);
@@ -21,22 +24,23 @@ Future<dynamic> updateConversations(dynamic context, Client client, Map<String, 
 
   switch (request.type) {
     case 'itemUpdate':
-      // For item updates, we might want to check if the user owns the item, 
+      // For item updates, we might want to check if the user owns the item,
       // but that requires an extra DB call. For now, we assume the frontend logic is correct
       // or we could add a check if 'requestingUserId' matches the seller of the item.
       // However, 'itemUpdate' might be triggered by system events too.
       // Let's at least ensure a user is logged in if it's a user-initiated action.
       if (requestingUserId == null) {
-         // If this is triggered by a system event (e.g. database trigger), this might be null.
-         // But since this is an HTTP function, it's likely user initiated.
-         // We'll skip strict check here for now as 'itemUpdate' logic is complex.
+        // If this is triggered by a system event (e.g. database trigger), this might be null.
+        // But since this is an HTTP function, it's likely user initiated.
+        // We'll skip strict check here for now as 'itemUpdate' logic is complex.
       }
       await _handleItemUpdate(logger, databases, request);
       return response.success({'message': 'Item update processed.'});
 
     case 'avatarUpdate':
       if (requestingUserId != null && requestingUserId != request.userId) {
-        throw UnauthorizedError('User ID mismatch. You cannot update avatar for another user.');
+        throw UnauthorizedError(
+            'User ID mismatch. You cannot update avatar for another user.');
       }
       await _handleAvatarUpdate(logger, databases, request);
       return response.success({'message': 'Avatar update processed.'});
@@ -46,9 +50,11 @@ Future<dynamic> updateConversations(dynamic context, Client client, Map<String, 
   }
 }
 
-Future<void> _handleItemUpdate(Logger logger, Databases databases, UpdateConversationsRequest request) async {
+Future<void> _handleItemUpdate(Logger logger, Databases databases,
+    UpdateConversationsRequest request) async {
   if (request.itemId == null || request.newTitle == null) {
-    throw ValidationError('Missing fields for itemUpdate: itemId and newTitle.');
+    throw ValidationError(
+        'Missing fields for itemUpdate: itemId and newTitle.');
   }
 
   final documents = await _listAllDocuments(databases, [
@@ -63,7 +69,8 @@ Future<void> _handleItemUpdate(Logger logger, Databases databases, UpdateConvers
   final updateFutures = documents.map((doc) {
     return databases.updateDocument(
       databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-      collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+      collectionId:
+          Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
       documentId: doc.$id,
       data: {
         'itemTitle': request.newTitle,
@@ -73,10 +80,12 @@ Future<void> _handleItemUpdate(Logger logger, Databases databases, UpdateConvers
   });
 
   await Future.wait(updateFutures);
-  logger.info('Updated ${documents.length} conversations for item ${request.itemId}.');
+  logger.info(
+      'Updated ${documents.length} conversations for item ${request.itemId}.');
 }
 
-Future<void> _handleAvatarUpdate(Logger logger, Databases databases, UpdateConversationsRequest request) async {
+Future<void> _handleAvatarUpdate(Logger logger, Databases databases,
+    UpdateConversationsRequest request) async {
   if (request.userId == null) {
     throw ValidationError('Missing field for avatarUpdate: userId.');
   }
@@ -95,12 +104,13 @@ Future<void> _handleAvatarUpdate(Logger logger, Databases databases, UpdateConve
     try {
       participantAvatars = jsonDecode(doc.data['participantAvatars'] ?? '{}');
     } catch (_) {}
-    
+
     participantAvatars[request.userId!] = request.newAvatarUrl;
 
     return databases.updateDocument(
       databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-      collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+      collectionId:
+          Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
       documentId: doc.$id,
       data: {
         'participantAvatars': jsonEncode(participantAvatars),
@@ -109,10 +119,12 @@ Future<void> _handleAvatarUpdate(Logger logger, Databases databases, UpdateConve
   });
 
   await Future.wait(updateFutures);
-  logger.info('Updated avatar in ${documents.length} conversations for user ${request.userId}.');
+  logger.info(
+      'Updated avatar in ${documents.length} conversations for user ${request.userId}.');
 }
 
-Future<List<Document>> _listAllDocuments(Databases databases, List<String> queries) async {
+Future<List<Document>> _listAllDocuments(
+    Databases databases, List<String> queries) async {
   List<Document> documents = [];
   String? cursor;
 
@@ -124,7 +136,8 @@ Future<List<Document>> _listAllDocuments(Databases databases, List<String> queri
 
     final response = await databases.listDocuments(
       databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-      collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+      collectionId:
+          Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
       queries: currentQueries,
     );
 

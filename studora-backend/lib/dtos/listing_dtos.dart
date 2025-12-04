@@ -1,4 +1,3 @@
-import '../utils/exceptions.dart';
 import 'auth_dtos.dart';
 
 class GetPublicListingsRequest extends RequestDto {
@@ -29,15 +28,12 @@ class GetPublicListingsRequest extends RequestDto {
   });
 
   factory GetPublicListingsRequest.fromMap(Map<String, dynamic> map) {
-    // listingType is optional in the original code? 
-    // Looking at the code: if (listingType == 'marketplace' ...) else if (listingType == 'lost' ...)
-    // It seems it logic depends on it, but it might not be strictly required if there's a default path or if it just returns empty.
-    // However, usually listingType is a filter.
-    
     return GetPublicListingsRequest(
       listingType: map['listingType'],
       collegeId: map['collegeId'],
-      categoryIds: map['categoryIds'] != null ? List<String>.from(map['categoryIds']) : null,
+      categoryIds: map['categoryIds'] != null
+          ? List<String>.from(map['categoryIds'])
+          : null,
       searchQuery: map['searchQuery'],
       limit: map['limit'] ?? 15,
       offset: map['offset'] ?? 0,

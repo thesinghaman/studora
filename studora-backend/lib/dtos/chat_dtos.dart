@@ -1,5 +1,6 @@
 import '../utils/validator.dart';
 import '../utils/exceptions.dart';
+
 import 'auth_dtos.dart'; // For RequestDto
 
 class CreateMessageRequest extends RequestDto {
@@ -36,8 +37,11 @@ class CreateMessageRequest extends RequestDto {
     final senderIdError = Validator.validateRequired(senderId, 'Sender ID');
     if (senderIdError != null) throw ValidationError(senderIdError);
 
-    if (participants == null || participants is! List || participants.length < 2) {
-      throw ValidationError('Participants must be a list of at least 2 user IDs.');
+    if (participants == null ||
+        participants is! List ||
+        participants.length < 2) {
+      throw ValidationError(
+          'Participants must be a list of at least 2 user IDs.');
     }
 
     if ((text == null || text.toString().isEmpty) &&
@@ -50,7 +54,9 @@ class CreateMessageRequest extends RequestDto {
       participants: List<String>.from(participants),
       text: text,
       imageUrls: imageUrls != null ? List<String>.from(imageUrls) : null,
-      imageFileIds: map['imageFileIds'] != null ? List<String>.from(map['imageFileIds']) : null,
+      imageFileIds: map['imageFileIds'] != null
+          ? List<String>.from(map['imageFileIds'])
+          : null,
       messageType: map['messageType'],
       relatedItem: map['relatedItem'],
       participantNames: map['participantNames'],
@@ -90,7 +96,8 @@ class MarkMessagesAsReadRequest extends RequestDto {
     final conversationId = map['conversationId'];
     final userId = map['userId'];
 
-    final conversationIdError = Validator.validateRequired(conversationId, 'Conversation ID');
+    final conversationIdError =
+        Validator.validateRequired(conversationId, 'Conversation ID');
     if (conversationIdError != null) throw ValidationError(conversationIdError);
 
     final userIdError = Validator.validateRequired(userId, 'User ID');
@@ -184,7 +191,8 @@ class UpdateConversationsRequest extends RequestDto {
 
     if (type == 'itemUpdate') {
       if (map['itemId'] == null || map['newTitle'] == null) {
-        throw ValidationError('Missing fields for itemUpdate: itemId and newTitle.');
+        throw ValidationError(
+            'Missing fields for itemUpdate: itemId and newTitle.');
       }
     } else if (type == 'avatarUpdate') {
       // Add validation for avatarUpdate if needed

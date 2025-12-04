@@ -1,14 +1,19 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:dart_appwrite/dart_appwrite.dart';
 import 'package:dart_appwrite/models.dart';
+
 import '../utils/logger.dart';
 import '../utils/response_helper.dart';
-import '../dtos/chat_dtos.dart';
 import '../utils/exceptions.dart';
+
+import '../dtos/chat_dtos.dart';
+
 import 'notify_on_new_message.dart';
 
-Future<dynamic> createMessage(dynamic context, Client client, Map<String, dynamic> body) async {
+Future<dynamic> createMessage(
+    dynamic context, Client client, Map<String, dynamic> body) async {
   final logger = Logger(context);
   final response = ResponseHelper(context);
   final databases = Databases(client);
@@ -20,19 +25,24 @@ Future<dynamic> createMessage(dynamic context, Client client, Map<String, dynami
   final headers = context.req.headers as Map<String, dynamic>;
   final requestingUserId = headers['x-appwrite-user-id'];
   if (requestingUserId != null && requestingUserId != request.senderId) {
-    throw UnauthorizedError('Sender ID mismatch. You cannot send messages on behalf of another user.');
+    throw UnauthorizedError(
+        'Sender ID mismatch. You cannot send messages on behalf of another user.');
   }
 
   request.participants.sort();
-  final recipientId = request.participants.firstWhere((p) => p != request.senderId, orElse: () => '');
+  final recipientId = request.participants
+      .firstWhere((p) => p != request.senderId, orElse: () => '');
 
   // 2. Find Existing Conversation
   var conversationId = request.conversationId;
   if (conversationId == null) {
-    final queries = request.participants.map((id) => Query.contains('participants', id)).toList();
+    final queries = request.participants
+        .map((id) => Query.contains('participants', id))
+        .toList();
     final docList = await databases.listDocuments(
       databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-      collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+      collectionId:
+          Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
       queries: queries,
     );
 
@@ -40,9 +50,10 @@ Future<dynamic> createMessage(dynamic context, Client client, Map<String, dynami
       // Check for exact match
       final exactMatch = docList.documents.cast<Document?>().firstWhere((doc) {
         if (doc == null) return false;
-        final docParticipants = List<String>.from(doc.data['participants'])..sort();
+        final docParticipants = List<String>.from(doc.data['participants'])
+          ..sort();
         final reqParticipants = List<String>.from(request.participants)..sort();
-        
+
         if (docParticipants.length != reqParticipants.length) return false;
         for (int i = 0; i < docParticipants.length; i++) {
           if (docParticipants[i] != reqParticipants[i]) return false;
@@ -66,7 +77,8 @@ Future<dynamic> createMessage(dynamic context, Client client, Map<String, dynami
         collectionId: Platform.environment['APPWRITE_USERS_COLLECTION_ID']!,
         documentId: recipientId,
       );
-      final blockedUsers = List<String>.from(recipientDoc.data['blockedUsers'] ?? []);
+      final blockedUsers =
+          List<String>.from(recipientDoc.data['blockedUsers'] ?? []);
       isSenderBlocked = blockedUsers.contains(request.senderId);
     } catch (e) {
       logger.error('Could not check block status', e);
@@ -88,12 +100,15 @@ Future<dynamic> createMessage(dynamic context, Client client, Map<String, dynami
       // Update existing
       final conversationDoc = await databases.getDocument(
         databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-        collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+        collectionId:
+            Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
         documentId: conversationId,
       );
 
-      var visibleTo = List<String>.from(conversationDoc.data['visibleTo'] ?? []);
-      var deletedBy = List<String>.from(conversationDoc.data['deletedBy'] ?? []);
+      var visibleTo =
+          List<String>.from(conversationDoc.data['visibleTo'] ?? []);
+      var deletedBy =
+          List<String>.from(conversationDoc.data['deletedBy'] ?? []);
       var permissions = List<String>.from(conversationDoc.$permissions);
       bool permissionsUpdated = false;
 
@@ -102,7 +117,7 @@ Future<dynamic> createMessage(dynamic context, Client client, Map<String, dynami
           if (pId == recipientId && isSenderBlocked) continue;
 
           visibleTo.add(pId);
-          // Check if permission exists (simplified check)
+          // Check if permission exists
           if (!permissions.any((p) => p.contains('user:$pId'))) {
             permissions.add(Permission.read(Role.user(pId)));
             permissions.add(Permission.update(Role.user(pId)));
@@ -122,7 +137,8 @@ Future<dynamic> createMessage(dynamic context, Client client, Map<String, dynami
 
       await databases.updateDocument(
         databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-        collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+        collectionId:
+            Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
         documentId: conversationId,
         data: {
           'lastMessageTimestamp': timestamp,
@@ -134,7 +150,6 @@ Future<dynamic> createMessage(dynamic context, Client client, Map<String, dynami
         },
         permissions: permissionsUpdated ? permissions : null,
       );
-
     } else {
       // Create new
       final unreadCounts = {
@@ -142,7 +157,8 @@ Future<dynamic> createMessage(dynamic context, Client client, Map<String, dynami
         if (recipientId.isNotEmpty) recipientId: isSenderBlocked ? 0 : 1,
       };
 
-      final visibleTo = isSenderBlocked ? [request.senderId] : request.participants;
+      final visibleTo =
+          isSenderBlocked ? [request.senderId] : request.participants;
 
       List<String> permissions;
       if (isSenderBlocked) {
@@ -162,7 +178,8 @@ Future<dynamic> createMessage(dynamic context, Client client, Map<String, dynami
 
       final newDoc = await databases.createDocument(
         databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-        collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+        collectionId:
+            Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
         documentId: ID.unique(),
         data: {
           'participants': request.participants,
@@ -198,11 +215,14 @@ Future<dynamic> createMessage(dynamic context, Client client, Map<String, dynami
         Permission.delete(Role.user(request.senderId)),
       ];
     } else {
-      messagePermissions = request.participants.expand((id) => [
-        Permission.read(Role.user(id)),
-        Permission.update(Role.user(id)),
-        Permission.delete(Role.user(id)),
-      ]).toList().cast<String>();
+      messagePermissions = request.participants
+          .expand((id) => [
+                Permission.read(Role.user(id)),
+                Permission.update(Role.user(id)),
+                Permission.delete(Role.user(id)),
+              ])
+          .toList()
+          .cast<String>();
     }
 
     final messageDoc = await databases.createDocument(

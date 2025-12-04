@@ -1,4 +1,5 @@
 import 'package:dart_appwrite/dart_appwrite.dart';
+
 import '../utils/app_config.dart';
 import '../utils/logger.dart';
 import '../utils/response_helper.dart';
@@ -20,9 +21,8 @@ Future<dynamic> completePasswordReset(
   final users = Users(client);
 
   // Public Client (for OTP verification)
-  final publicClient = Client()
-      .setEndpoint(AppConfig.endpoint)
-      .setProject(AppConfig.projectId);
+  final publicClient =
+      Client().setEndpoint(AppConfig.endpoint).setProject(AppConfig.projectId);
   final account = Account(publicClient);
 
   logger.info('Completing password reset', {'userId': request.userId});
@@ -33,7 +33,7 @@ Future<dynamic> completePasswordReset(
       userId: request.userId,
       secret: request.secret,
     );
-    
+
     // 3. Force Update Password (Admin)
     await users.updatePassword(
       userId: request.userId,
@@ -47,10 +47,10 @@ Future<dynamic> completePasswordReset(
     );
 
     return response.success({'message': 'Password reset successful'});
-
   } on AppwriteException catch (e) {
     if (e.code == 401) {
-      logger.info('Invalid verification code provided', {'userId': request.userId});
+      logger.info(
+          'Invalid verification code provided', {'userId': request.userId});
       throw UnauthorizedError('Invalid verification code');
     }
     rethrow; // Let main.dart handle other Appwrite errors

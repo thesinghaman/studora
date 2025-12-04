@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:dart_appwrite/dart_appwrite.dart';
+
 import 'utils/appwrite_client.dart';
 import 'utils/app_config.dart';
 import 'utils/logger.dart';
@@ -30,10 +32,10 @@ Future<dynamic> main(final context) async {
 
     // 2. Initialize Client
     final client = AppwriteClient.init();
-  
+
     // 3. Parse Request
-    final body = context.req.bodyRaw is String 
-        ? jsonDecode(context.req.bodyRaw) 
+    final body = context.req.bodyRaw is String
+        ? jsonDecode(context.req.bodyRaw)
         : context.req.body;
 
     final action = body['action'];
@@ -63,7 +65,7 @@ Future<dynamic> main(final context) async {
         return await initiatePasswordReset(context, client, body);
       case 'complete_password_reset':
         return await completePasswordReset(context, client, body);
-      
+
       default:
         logger.error('Invalid Action requested: $action');
         return response.error(

@@ -1,12 +1,15 @@
 import 'dart:io';
+
 import 'package:dart_appwrite/dart_appwrite.dart';
 import 'package:dart_appwrite/models.dart';
+
 import '../utils/logger.dart';
 import '../utils/response_helper.dart';
 import '../dtos/user_dtos.dart';
 import '../utils/exceptions.dart';
 
-Future<dynamic> deleteUnverifiedUser(dynamic context, Client client, Map<String, dynamic> data) async {
+Future<dynamic> deleteUnverifiedUser(
+    dynamic context, Client client, Map<String, dynamic> data) async {
   final logger = Logger(context);
   final response = ResponseHelper(context);
   final users = Users(client);
@@ -17,12 +20,13 @@ Future<dynamic> deleteUnverifiedUser(dynamic context, Client client, Map<String,
 
   // 2. Verify JWT and User Identity
   final userClient = Client()
-    .setEndpoint(Platform.environment['APPWRITE_ENDPOINT'] ?? 'https://cloud.appwrite.io/v1')
-    .setProject(Platform.environment['APPWRITE_PROJECT_ID'] ?? '')
-    .setJWT(request.jwt);
-  
+      .setEndpoint(Platform.environment['APPWRITE_ENDPOINT'] ??
+          'https://cloud.appwrite.io/v1')
+      .setProject(Platform.environment['APPWRITE_PROJECT_ID'] ?? '')
+      .setJWT(request.jwt);
+
   final userAccount = Account(userClient);
-  
+
   // We need to catch errors here specifically for JWT validation
   User user;
   try {
@@ -35,12 +39,14 @@ Future<dynamic> deleteUnverifiedUser(dynamic context, Client client, Map<String,
   }
 
   if (user.$id != request.userIdToDelete) {
-    logger.error('SECURITY ALERT: JWT mismatch for user ${request.userIdToDelete}');
+    logger.error(
+        'SECURITY ALERT: JWT mismatch for user ${request.userIdToDelete}');
     throw UnauthorizedError('JWT does not match user ID.');
   }
 
   if (user.emailVerification) {
-    logger.info('Attempted to delete VERIFIED user ${request.userIdToDelete}. Blocked.');
+    logger.info(
+        'Attempted to delete VERIFIED user ${request.userIdToDelete}. Blocked.');
     throw ValidationError('Cannot delete a verified user account.');
   }
 

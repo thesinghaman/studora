@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:dart_appwrite/dart_appwrite.dart';
+
 import '../utils/logger.dart';
 import '../utils/response_helper.dart';
 import '../dtos/chat_dtos.dart';
 import '../utils/exceptions.dart';
 
-Future<dynamic> markMessagesAsRead(dynamic context, Client client, Map<String, dynamic> body) async {
+Future<dynamic> markMessagesAsRead(
+    dynamic context, Client client, Map<String, dynamic> body) async {
   final logger = Logger(context);
   final response = ResponseHelper(context);
   final databases = Databases(client);
@@ -18,7 +21,8 @@ Future<dynamic> markMessagesAsRead(dynamic context, Client client, Map<String, d
   final headers = context.req.headers as Map<String, dynamic>;
   final requestingUserId = headers['x-appwrite-user-id'];
   if (requestingUserId != null && requestingUserId != request.userId) {
-    throw UnauthorizedError('User ID mismatch. You cannot mark messages as read for another user.');
+    throw UnauthorizedError(
+        'User ID mismatch. You cannot mark messages as read for another user.');
   }
 
   // 2. Find unread messages sent by others
@@ -42,7 +46,8 @@ Future<dynamic> markMessagesAsRead(dynamic context, Client client, Map<String, d
   try {
     final conversation = await databases.getDocument(
       databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-      collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+      collectionId:
+          Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
       documentId: request.conversationId,
     );
 
@@ -56,7 +61,8 @@ Future<dynamic> markMessagesAsRead(dynamic context, Client client, Map<String, d
       unreadCounts[request.userId] = 0;
       await databases.updateDocument(
         databaseId: Platform.environment['APPWRITE_DATABASE_ID']!,
-        collectionId: Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
+        collectionId:
+            Platform.environment['APPWRITE_CONVERSATIONS_COLLECTION_ID']!,
         documentId: request.conversationId,
         data: {'unreadCounts': jsonEncode(unreadCounts)},
       );
@@ -80,10 +86,12 @@ Future<dynamic> markMessagesAsRead(dynamic context, Client client, Map<String, d
   if (futures.isNotEmpty) {
     try {
       await Future.wait(futures);
-      logger.info('Updated ${messagesToUpdate.length} messages and reset count for ${request.userId}');
+      logger.info(
+          'Updated ${messagesToUpdate.length} messages and reset count for ${request.userId}');
     } catch (e) {
       logger.error('Failed to update some messages', e);
-      throw AppError(message: 'Failed to update message status', statusCode: 500);
+      throw AppError(
+          message: 'Failed to update message status', statusCode: 500);
     }
   } else {
     logger.info('No updates needed for ${request.userId}');
